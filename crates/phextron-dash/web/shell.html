@@ -99,6 +99,41 @@
   }
   footer { padding: 0 22px 20px; color: var(--muted); font-size: 12.5px; }
   .err { color: var(--bad); }
+  /* Wiring panel: the fleet diagram. Dot fill = the node's uplink
+     class as wiring.phext declares it; state rides opacity/stroke. */
+  .wsvg { width: 100%; height: auto; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+  .wlink { stroke: var(--accent); stroke-width: 3; opacity: .55; }
+  .wlink-x { stroke: var(--hold); stroke-width: 2.5; stroke-dasharray: 7 5; opacity: .8; fill: none; }
+  .wlink-dim { opacity: .22; }
+  .wstub { stroke: var(--ok); stroke-width: 3; opacity: .7; }
+  .wlinklabel { fill: var(--muted); font-size: 10.5px; text-anchor: middle; }
+  .wnode { cursor: pointer; }
+  .wnode circle { stroke-width: 2; stroke: var(--card); }
+  .wnode .w-ethernet { fill: var(--ok); }
+  .wnode .w-usb4 { fill: var(--accent); }
+  .wnode .w-wifi { fill: var(--warn); }
+  .wnode .w-unstated { fill: var(--muted); }
+  .wnode .w-dark { opacity: .38; }
+  .wnode .w-unlocated { fill: var(--card); stroke: var(--muted); stroke-dasharray: 5 4; }
+  .wnode .w-keyrefused { stroke: var(--bad); stroke-width: 3.5; }
+  /* Labels never take pointer events: a double-click lands on the
+     dot itself wherever inside the node it falls. (Caught by the
+     panel's browser verification — the initials label sat over the
+     circle and intercepted the click.) */
+  .wnode text { text-anchor: middle; fill: var(--ink); pointer-events: none; }
+  .wnode .wini { fill: var(--paper); font-weight: 700; font-size: 13px; }
+  .wnode .w-unlocated + .wini, .wnode .w-unstated + .wini { fill: var(--ink); }
+  .wnode .whost { fill: var(--muted); font-size: 11px; }
+  .wnode .wmeta { fill: var(--muted); font-size: 10px; }
+  .wnode .wdiv { fill: var(--warn); font-size: 10.5px; font-weight: 700; }
+  .wnode:hover circle { stroke: var(--ink); }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .sw-ethernet { background: var(--ok); } .sw-usb4 { background: var(--accent); }
+  .sw-wifi { background: var(--warn); } .sw-unstated { background: var(--muted); }
+  .sshcard pre {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 9px 12px; overflow-x: auto; font-size: 12.5px; margin: 8px 0;
+  }
 </style>
 </head>
 <body>
@@ -481,6 +516,135 @@
     return out;
   }
 
+  var wiringNodes = {};  // initials -> node, for the double-click
+
+  function renderWiring(d) {
+    var b = d.body, r = b.register, c = r.counts, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">nodes <b>' + esc(r.nodes_recorded) + '</b></span>' +
+           '<span class="chip">links <b>' + esc(r.links_recorded) + '</b></span>' +
+           '<span class="chip"><span class="swatch sw-ethernet"></span>2.5G Ethernet <b>' + esc(c.ethernet) + '</b></span>' +
+           '<span class="chip"><span class="swatch sw-usb4"></span>USB4 <b>' + esc(c.usb4) + '</b></span>' +
+           '<span class="chip"><span class="swatch sw-wifi"></span>WiFi <b>' + esc(c.wifi) + '</b></span>' +
+           '<span class="chip"><span class="swatch sw-unstated"></span>unstated <b>' + esc(c.unstated) + '</b></span>' +
+           '<span class="chip">sha256 <b>' + esc(String(r.sha256).slice(0, 12)) + '…</b></span></div>';
+    out += '<div class="banner"><div>The fleet as <b>wiring.phext</b> declares it — dots are nodes, ' +
+           'dot colour is the uplink the register records, lines are its declared USB4 links.</div>' +
+           '<div class="coord">route metrics: ethernet ' + esc(r.metrics.ethernet) + ' · usb4 ' +
+           esc(r.metrics.usb4) + ' · wifi ' + esc(r.metrics.wifi) +
+           ' — lower wins; WiFi is the back-haul of last resort, and the register declares no ' +
+           'per-node WiFi uplink, so no dot wears it. Dimmed dots are dark; hollow dots are ' +
+           'unlocated; a red ring is key-refused. <b>Double-click a node for its SSH command.</b></div></div>';
+
+    var divById = {};
+    b.divergences.forEach(function (dv) { divById[dv.id] = dv.statement; });
+    var byIni = {};
+    b.nodes.forEach(function (n) { byIni[n.initials] = n; });
+    wiringNodes = byIni;
+    function pos(n) { return { x: 150 + (n.col - 1) * 240, y: 66 + (n.row - 1) * 112 }; }
+
+    var svg = '<svg class="wsvg" viewBox="0 0 980 716" role="img" aria-label="Fleet wiring diagram">';
+    // Ethernet uplink stubs at the row edges (from the register's
+    // uplink: lines), then the declared links, then the nodes.
+    b.uplinks.forEach(function (u) {
+      var n = byIni[u.node]; if (!n) return;
+      var p = pos(n);
+      var x2 = u.side === "left" ? p.x - 58 : p.x + 58;
+      svg += '<line class="wstub" x1="' + p.x + '" y1="' + p.y + '" x2="' + x2 + '" y2="' + p.y + '"><title>' +
+             esc(u.node) + ' 2.5G Ethernet uplink (' + esc(u.side) + ')' +
+             (u.iface ? ' · ' + esc(u.iface) : ' · interface unstated in the register') + '</title></line>';
+    });
+    b.links.forEach(function (l) {
+      var na = byIni[l.a], nb = byIni[l.b]; if (!na || !nb) return;
+      var pa = pos(na), pb = pos(nb);
+      var dim = (na.state !== "online" || nb.state !== "online") ? ' wlink-dim' : '';
+      var title = esc(l.kind) + ' ' + esc(l.a) + '-' + esc(l.b) + ' · ' + esc(l.subnet) +
+                  ' · expect ' + esc(l.expect_gbit) + ' Gbit' +
+                  (l.state ? ' · ' + esc(l.state) : '') +
+                  (l.divergences.length ? ' · ' + esc(l.divergences.join(", ")) : '');
+      if (l.kind === "xlink") {
+        var mx = (pa.x + pb.x) / 2, my = Math.min(pa.y, pb.y) - 46;
+        svg += '<path class="wlink-x' + dim + '" d="M ' + pa.x + ' ' + pa.y +
+               ' Q ' + mx + ' ' + my + ' ' + pb.x + ' ' + pb.y + '"><title>' + title + '</title></path>';
+        svg += '<text class="wlinklabel" x="' + mx + '" y="' + (my + 26) + '">' +
+               esc(l.a) + '–' + esc(l.b) + ' ' + esc(l.subnet) +
+               (l.divergences.length ? ' · ' + esc(l.divergences.join(",")) : '') + '</text>';
+      } else {
+        svg += '<line class="wlink' + dim + '" x1="' + pa.x + '" y1="' + pa.y +
+               '" x2="' + pb.x + '" y2="' + pb.y + '"><title>' + title + '</title></line>';
+      }
+    });
+    b.nodes.forEach(function (n) {
+      var p = pos(n);
+      var cls = 'w-' + esc(n.uplink.class);
+      if (n.state === "dark") cls += ' w-dark';
+      if (n.state === "unlocated") cls += ' w-unlocated';
+      if (n.state === "key-refused") cls += ' w-keyrefused';
+      var divTitle = n.divergences.map(function (id) { return id + ": " + (divById[id] || ""); }).join("\n");
+      svg += '<g class="wnode" data-initials="' + esc(n.initials) + '">' +
+             '<title>' + esc(n.hostname) + ' (' + esc(n.initials) + ') · row ' + esc(n.row) +
+             ' col ' + esc(n.col) + ' · ' + esc(n.ram_gb) + ' GB · ' + esc(n.state) +
+             ' · uplink ' + esc(n.uplink.class) +
+             (n.uplink.iface ? ' (' + esc(n.uplink.iface) + ')' : '') +
+             (divTitle ? '\n' + esc(divTitle) : '') +
+             '\nDouble-click for the SSH command.</title>' +
+             '<circle class="' + cls + '" cx="' + p.x + '" cy="' + p.y + '" r="20"></circle>' +
+             '<text class="wini" x="' + p.x + '" y="' + (p.y + 4.5) + '">' + esc(n.initials) + '</text>' +
+             '<text class="whost" x="' + p.x + '" y="' + (p.y + 38) + '">' + esc(n.hostname) + '</text>' +
+             '<text class="wmeta" x="' + p.x + '" y="' + (p.y + 52) + '">' +
+             esc(n.ram_gb) + ' GB · ' + esc(n.state) + '</text>' +
+             (n.divergences.length
+               ? '<text class="wdiv" x="' + (p.x + 24) + '" y="' + (p.y - 14) + '">' +
+                 esc(n.divergences.join(" ")) + '</text>'
+               : '') +
+             '</g>';
+    });
+    svg += '</svg>';
+    out += svg;
+    out += '<div class="card sshcard" id="sshCard" style="margin-top:14px;max-width:none">' +
+           '<h2>SSH</h2><p class="src" style="margin:0">Double-click a node in the diagram. ' +
+           esc(r.double_click_note) + '</p><div id="sshBody"></div></div>';
+    if (b.divergences.length) {
+      out += '<table style="margin-top:14px"><thead><tr><th>Divergence</th><th>Keys</th><th>Statement (from the register)</th></tr></thead><tbody>';
+      b.divergences.forEach(function (dv) {
+        out += '<tr><td class="st st-gap">' + esc(dv.id) + '</td><td>' +
+               esc(dv.keys.join(", ")) + '</td><td>' + esc(dv.statement) + '</td></tr>';
+      });
+      out += '</tbody></table>';
+    }
+    return out;
+  }
+
+  function showSsh(initials) {
+    var n = wiringNodes[initials];
+    var body = document.getElementById("sshBody");
+    if (!n || !body) return;
+    var out = '<p style="margin:8px 0 0"><b>' + esc(n.hostname) + '</b> (' + esc(n.initials) +
+              ') · ' + esc(n.state) + ' · uplink ' + esc(n.uplink.class) + '</p>';
+    if (n.ssh) {
+      out += '<p class="src">No session was attached — §1.9\'s cluster sessions are not built yet. ' +
+             'The exact command, from the register\'s address:</p>' +
+             '<pre><code>' + esc(n.ssh.command) + '</code></pre>' +
+             '<button type="button" id="sshCopy">Copy command</button>';
+      if (n.ssh.fleet_command) {
+        out += '<p class="src" style="margin-top:8px">Same hop via the fleet wrapper: <code>' +
+               esc(n.ssh.fleet_command) + '</code></p>';
+      }
+      body.innerHTML = out;
+      document.getElementById("sshCopy").addEventListener("click", function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(n.ssh.command);
+        this.textContent = "Copied";
+      });
+    } else {
+      out += '<p class="err" style="margin:8px 0 0">wiring.phext records no SSH address for this ' +
+             'node (<code>ssh -</code>), so there is no command to show — its declared state is ' +
+             esc(n.state) + '.</p>';
+      body.innerHTML = out;
+    }
+    document.getElementById("sshCard").scrollIntoView({ block: "nearest" });
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -510,6 +674,12 @@
         else if (d.state === "live" && d.id === "data") el.innerHTML = renderData(d);
         else if (d.state === "live" && d.id === "substrates") el.innerHTML = renderSubstrates(d);
         else if (d.state === "live" && d.id === "inkling") el.innerHTML = renderInkling(d);
+        else if (d.state === "live" && d.id === "wiring") {
+          el.innerHTML = renderWiring(d);
+          el.querySelectorAll(".wnode").forEach(function (g) {
+            g.addEventListener("dblclick", function () { showSsh(g.dataset.initials); });
+          });
+        }
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

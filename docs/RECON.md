@@ -491,3 +491,81 @@ mapped:
   unavailable. When a real dispatch source lands for a windowed
   substrate (the §1.9 registry first), its verdict drops into the
   derivation the panel already tests.
+
+## WIRING — the fleet topology, clickable to SSH (2026-11-21, W4 plan §1.11, task 24.5.6/6.5.9/5.5.12)
+
+Will's direction (2026-11-21 23:17 CST): *"also include the wiring
+diagram with dots for 2.5G Ethernet, WiFi, and USB4 uplinks — SSH
+accessible from double-clicking on the node."* The panel
+(`crates/phextron-dash/src/wiring.rs`) draws the fleet from
+`wiring.phext` — the ranch network declaration of record
+(home: wbic16/human@exo), parsed with libphext (`explode`) the
+same way the Data panel parses stash.phext, and puts the
+register's SHA-256 on its face. It reads only the register's
+machine-checked lines (`node:`, `usb4:`, `xlink:`, `uplink:`,
+`proxy:`, `metric:`, `divergence:`), in the forms the register's
+own Conventions scroll declares. What the register yielded, and
+what it did not:
+
+- **Nodes: all 24**, each with row/column from its row scroll,
+  hostname, RAM, declared state (online / dark / unlocated /
+  key-refused), and tailnet SSH address where one is recorded
+  (18 of 24; the dark, unlocated, and key-refused nodes record
+  `ssh -`).
+- **Uplink classification, from declared lines only.** A node
+  named by an `uplink:` line holds its row's 2.5G Ethernet
+  uplink — 12 nodes (both edges of all six rows); two of those
+  lines (BW, AM) leave the interface `unknown`, and the panel
+  renders the interface as unstated while the uplink itself is
+  declared. The 12 middle nodes ride their declared USB4 links.
+  **WiFi is assigned to no node**: the register declares no
+  per-node WiFi uplink anywhere — WiFi exists in it only as
+  route policy (`metric: wifi 600`, back-haul of last resort).
+  The legend carries the WiFi class at zero with that reason on
+  the panel's face; prose mentions (orchid-flow "is on WiFi
+  today", the legacy proxy's WiFi address) are never mined for
+  classification. Nothing is inferred from hostnames or the
+  initials map.
+- **Links: all 19** — 18 in-row `usb4:` chain links plus the
+  QH–LO `xlink:` (10.54.90.0/24, state provisional-offdiagram),
+  drawn dashed across the grid.
+- **Divergences D1–D16** attach to the elements their keys name
+  exactly (node:GW → D3 on great-white; usb4:OF-HV → D16;
+  uplink:NK → D10). Wildcard and policy keys (D11 proxy:*,
+  D12 policy:lilly, D13, D14, D15 uplink:*) and keys naming
+  undeclared elements (D7/D8's KO-SC jumper) attach to nothing
+  and render only in the panel's divergence list.
+- **The Conventions scroll's form lines are not declarations.**
+  The register states each form with `<placeholder>` tokens
+  (`usb4: <A>-<B> subnet <10.54.x.0/24> …`); the first live read
+  drew them as a phantom link, uplink, proxy, and divergence
+  before the parsers learned to refuse any line carrying a
+  placeholder. A regression test holds the real forms verbatim
+  and asserts they parse to nothing.
+- **Double-click → SSH: the command form, stated plainly.**
+  §1.9's cluster session machinery is not built (no session
+  registry exists in this codebase — the Substrates section
+  records the same gap), so the double-click yields the exact
+  SSH command built from the register's own tailnet address by
+  the fleet's standing recipe (the VM's Ed25519 key,
+  IdentitiesOnly, via the tailnet proxy), with the fleet-ssh.sh
+  short-name form alongside, and the card says no session was
+  attached and why. A node recorded `ssh -` gets the plain
+  no-address statement with its declared state. When §1.9
+  lands, the double-click's target changes; the register read
+  does not.
+
+Live read at build time (VM copy of the register, sha256
+4bdc4e5f…): 24 nodes, 19 links, 12 ethernet / 12 usb4 / 0 wifi /
+0 unstated, 12 uplinks, 6 row proxies, D1–D16. Verification:
+13 wiring unit tests (parse, classification, exact-key
+divergence attachment, form-line refusal, SSH command
+derivation, degrade paths); the full phextron-dash suite on the
+merged tree (this panel merged over the Inkling APIs panel's
+registration points, neither overwriting the other) passes
+74/74. Plus a headless-Chromium pass on aletheia-core against
+the merged build asserting 24 rendered dots in light and dark,
+the legend and honesty lines, and both double-click outcomes
+(NK yields its command; GW yields the no-address statement) —
+screenshots in docs/screenshots/wiring-{light,dark}.png and
+wiring-{ssh,nossh}-dark.png.

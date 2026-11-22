@@ -29,6 +29,7 @@ mod pending;
 mod phexts;
 mod substrates;
 mod video;
+mod wiring;
 
 use std::io::{Read, Write};
 use std::net::TcpListener;

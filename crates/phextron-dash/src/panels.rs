@@ -75,6 +75,9 @@ pub trait Panel: Send + Sync {
 /// the Inkling APIs panel (task 20.7.10/10.7.12/7.8.8): every
 /// Inkling endpoint on the ranch, from the wiring.phext roster and
 /// the inkling-apis.phext deployment register.
+/// — and the Wiring panel (W4 plan §1.11, task 24.5.6/6.5.9/5.5.12):
+/// the fleet topology drawn from wiring.phext, double-click a node
+/// for its SSH command.
 pub fn registry() -> Vec<Box<dyn Panel>> {
     vec![
         Box::new(crate::nodes::NodesPanel),
@@ -85,5 +88,6 @@ pub fn registry() -> Vec<Box<dyn Panel>> {
         Box::new(crate::data::DataPanel),
         Box::new(crate::substrates::SubstratesPanel),
         Box::new(crate::inkling::InklingPanel),
+        Box::new(crate::wiring::WiringPanel),
     ]
 }

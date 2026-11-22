@@ -75,6 +75,25 @@ no register scroll reads **unrecorded** rather than a guessed state.
 The page carries the client caveat on its face: the ranch HTTP proxy
 intercepts tailnet-IP requests — bypass it (`curl --noproxy '*'`).
 
+Wiring panel (W4 plan §1.11, task 24.5.6/6.5.9/5.5.12): the fleet
+wiring diagram, drawn from `wiring.phext` — the ranch network
+declaration of record (wbic16/human@exo), parsed with libphext like
+the Data panel parses stash.phext. Every node is a dot whose colour
+is the uplink the register's machine-checked lines declare: an
+`uplink:` line means the row's 2.5G Ethernet uplink, a declared
+USB4 link endpoint otherwise, unstated if neither — and WiFi is
+assigned to no node, because the register declares no per-node
+WiFi uplink (WiFi is route policy there, metric 600, the back-haul
+of last resort); the legend carries the class at zero with the
+reason on the panel's face. The register's divergence entries
+attach to the elements their keys name exactly. Double-clicking a
+node yields its exact SSH command (built from the register's
+tailnet address by the fleet recipe, fleet-ssh.sh form alongside)
+— §1.9's session attach is not built yet, and the panel says so
+rather than faking it; a node the register records as `ssh -` gets
+the plain no-address statement. Source map: `../../docs/RECON.md`,
+WIRING section.
+
 Stack: Rust across the program (Will's ruling, 2026-11-21) — std-first HTTP
 in the phext-lattice / markdown-wizard lineage. This crate's dependencies
 are `libphext` (the reference phext parser) and `serde_json`, nothing else.
@@ -100,11 +119,12 @@ PHEXTRON_PHEXTS_AWSBOX_DIR=/source/human \
 PHEXTRON_SUBSTRATES_CHECKS_PHEXT=/home/wbic16/phextron-data/phext-vm/substrate-checks.phext \
 PHEXTRON_INKLING_WIRING_PHEXT=/home/wbic16/phextron-data/phext-vm/wiring.phext \
 PHEXTRON_INKLING_APIS_PHEXT=/home/wbic16/phextron-data/phext-vm/inkling-apis.phext \
+PHEXTRON_WIRING_PHEXT=/home/wbic16/phextron-data/phext-vm/wiring.phext \
 PHEXTRON_PORT=8901 ../../target/release/phextron
 ```
 
 Then open http://127.0.0.1:8901/ — JSON at `/api/panels` and
-`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts, data, substrates, inkling).
+`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts, data, substrates, inkling, wiring).
 
 ## Adding a panel
 
