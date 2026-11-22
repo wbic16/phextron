@@ -246,3 +246,63 @@ Cross-cutting, before any public serving: the console deployment itself —
 co-locate the sampler outputs (or SQ-host state.phext), put the serving
 layer behind Desktop SSO / MCP Auth, and give wbic16/phextron its Jenkins
 job on the ranch controller (CI is ranch Jenkins only).
+
+## STASH — the estate-wide data census (2026-11-21)
+
+Will's directive: "make sure phextron has visibility into everywhere
+I've stashed data." The census is a durable phext register Phextron can
+read live: **stash.phext** in ~/workspace/phext (source
+stash-source.json, builder build_stash_phext.py, --check CURRENT,
+sha256 4dcd956e20c41fb13b42aab63b5b49f2829b791e44540c7c1593b54f001ef206;
+verified parseable by SQ — toc + select exercised). One scroll per
+stash at 1.1.1/1.1.1/1.1.N; the home scroll carries totals computed by
+the builder from the entries, never hand-written rollups.
+
+- **67 stashes recorded; 1,953,371,966,239 bytes (~1.95 TB) measured**
+  across the 45 counted entries (detail scrolls inside a counted
+  parent are marked counted=no so nothing double-counts).
+- By kind: working trees 27, other 15, phext corpus 6, film & renders
+  4, backups 4, mailboxes 3, registers 2, media 2, site data 2,
+  repos 2.
+- Coverage today: the VM phext corpus and the awsbox human corpus are
+  already read by the phexts panel; the nodes panel sees nodes but not
+  their data roots — everything else in the register is new surface.
+
+Surprises the census surfaced:
+
+- **chromium-census, ~240 GB** in the hub's home — the largest single
+  stash on aletheia-core, previously in no register.
+- The hub's system Ollama store (/usr/share/ollama) is **318 GB**;
+  fleet-wide the system stores dwarf the home dirs (lighthouse-omen
+  84 GB, ashfall-haven 83 GB, elven-path 78 GB + a 51 GB ~/models).
+- **~1.1 TB of the hub's df-used is unattributed** by read-only
+  probes (dotdirs, deleted-open files, snapshots, containers and
+  >10 GB files all checked and excluded). Recorded in the register as
+  the "Hub unattributed remainder" gap; a full du -sb /home/wbic16
+  (timed out at 240 s) is the follow-up probe.
+- orchid-flow exports **six** NFS shares, not one: shared (134.6 GB —
+  lastbook alone is 107 GB), exocortex and mirrorborn (small, incl. a
+  phext stash), and models/backups/bliss which are **mounted
+  fleet-wide and completely empty**.
+- GitHub grew: **242 repos, 5,296,733,184 B** by GraphQL diskUsage
+  (2026-11-15's count was 219). Largest: exo-dreams 710,437,888 B.
+
+Unenumerated gaps (named in the register with reasons): Great White
+(SSH key refused), aurora-continuum / best-willow / delta-wood
+(offline since 2026-11-04), Uncanny Valley (census-measured only;
+jared's key grant pending), Neon's container corpus (inside the
+Antigravity Podman container, not visible from the WSL2 SSH landing),
+the Lilly Windows side (no read path), Google Drive (connector auth
+unavailable in this environment), the ni-knight archive root (task
+30.4.6/5.5.8/4.4.8 was creating it concurrently — absent at probe
+time, re-census when it lands), and three nodes' system Ollama
+stores (thermal hold / fanout truncation).
+
+What the Data panel needs: read stash.phext itself (SQ or libphext —
+the register is the source, not a scrape of this document); re-probe
+on the sampler's cadence via each entry's read_method (filesystem
+sampler over tailnet SSH for node/awsbox roots, SQ /api/v2 for hosted
+corpora, GitHub GraphQL diskUsage for the account); render unmeasured
+entries as named gaps, never as zeroes; and treat counted=no detail
+scrolls as drill-down under their counted parent so the estate total
+stays honest.
