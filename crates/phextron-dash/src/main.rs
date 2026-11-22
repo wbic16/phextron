@@ -13,6 +13,12 @@
 //!
 //! Config: PHEXTRON_PORT (default 8901), PHEXTRON_BIND (default 127.0.0.1),
 //! plus the per-panel source paths documented in each reader module.
+//!
+//! The web UI (W4 plan §1.12) is served under /web from PHEXTRON_WEB_DIR
+//! (default "web-dist") — the dist/ directory built by crates/phextron-web
+//! (build.sh). Its canonical host is tron.phext.io; its auth is phext.tech
+//! single sign-on, consumed at deploy time — the server grows no auth of
+//! its own for the web surface, per Will's 2026-11-21 ruling.
 
 mod data;
 mod jenkins;
@@ -32,15 +38,48 @@ fn security_headers() -> &'static str {
 }
 
 fn respond(stream: &mut std::net::TcpStream, status: &str, ctype: &str, body: &str) {
-    let out = format!(
-        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-cache\r\n{}\r\n{}",
+    respond_bytes(stream, status, ctype, body.as_bytes(), security_headers());
+}
+
+fn respond_bytes(
+    stream: &mut std::net::TcpStream,
+    status: &str,
+    ctype: &str,
+    body: &[u8],
+    headers: &str,
+) {
+    let head = format!(
+        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-cache\r\n{}\r\n",
         status,
         ctype,
         body.len(),
-        security_headers(),
-        body
+        headers
     );
-    let _ = stream.write_all(out.as_bytes());
+    let _ = stream.write_all(head.as_bytes());
+    let _ = stream.write_all(body);
+}
+
+/// The web UI's CSP: the shell's policy plus 'wasm-unsafe-eval', which
+/// Chrome requires before it will compile a WebAssembly module. Scoped to
+/// the /web responses only — the desktop shell's policy is unchanged.
+fn web_security_headers() -> &'static str {
+    "X-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'\r\n"
+}
+
+/// Serve one file of the WASM web UI's dist/ (crates/phextron-web/build.sh)
+/// from PHEXTRON_WEB_DIR. A missing build is a named 404, not a blank page.
+fn serve_web(stream: &mut std::net::TcpStream, file: &str, ctype: &str) {
+    let dir = std::env::var("PHEXTRON_WEB_DIR").unwrap_or_else(|_| "web-dist".to_string());
+    let path = format!("{}/{}", dir.trim_end_matches('/'), file);
+    match std::fs::read(&path) {
+        Ok(bytes) => respond_bytes(stream, "200 OK", ctype, &bytes, web_security_headers()),
+        Err(_) => respond(
+            stream,
+            "404 Not Found",
+            "text/plain",
+            "web UI not built — run crates/phextron-web/build.sh and point PHEXTRON_WEB_DIR at its dist/\n",
+        ),
+    }
 }
 
 fn handle(mut stream: std::net::TcpStream) {
@@ -63,6 +102,9 @@ fn handle(mut stream: std::net::TcpStream) {
     let registry = panels::registry();
     match path.as_str() {
         "/" => respond(&mut stream, "200 OK", "text/html; charset=utf-8", SHELL),
+        "/web" | "/web/" => serve_web(&mut stream, "index.html", "text/html; charset=utf-8"),
+        "/web/glue.js" => serve_web(&mut stream, "glue.js", "text/javascript; charset=utf-8"),
+        "/web/phextron_web.wasm" => serve_web(&mut stream, "phextron_web.wasm", "application/wasm"),
         "/health" => respond(&mut stream, "200 OK", "text/plain", "ok\n"),
         "/api/panels" => {
             let list: Vec<serde_json::Value> = registry

@@ -8,3 +8,4 @@ Phextron tooling (Will, 2026-11-21: Rust only, no C#, no NuGet).
 - `crates/gl2-credman` — G-L2: thin Windows Credential Manager binding via direct advapi32/shell32 FFI (zero dependencies). See its README.
 
 - `crates/phextron-dash` — the console dashboards: one shell, one live-source panel per domain (ranch nodes live in stage 1; Jenkins, video, cloud AI, phexts per docs/RECON.md), plus the Data panel: every data stash in the estate, read from the stash.phext census register.
+- `crates/phextron-web` — the web UI (W4 plan §1.12): the console's panel renderers in Rust, compiled to WebAssembly for tron.phext.io — standalone crate, zero dependencies, served by phextron-dash under /web. Stage 1 renders the ranch-nodes panel; see its README for the toolchain record and the stage-2 order (tron.phext.io deploy, phext.tech SSO, remaining panels).

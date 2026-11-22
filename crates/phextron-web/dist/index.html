@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Phextron — the Exocortex console (web)</title>
+<!--
+  Phextron web UI — canonical host: tron.phext.io
+  The panels on this page are rendered client-side by the WASM build of the
+  console's own Rust code (crate: phextron-web), reading the same live
+  /api/panels/<id> JSON the desktop shell reads. Stage 1 renders the
+  ranch-nodes panel; the remaining panels port in stage 2.
+
+  SSO INTEGRATION POINT: tron.phext.io consumes phext.tech single sign-on
+  (Will's ruling, 2026-11-21). This page runs no auth of its own and invents
+  none: when the phext.tech SSO wiring lands (stage 2, with the awsbox
+  deploy), the sign-in control renders into #sso-slot below and the panel
+  API rides the phext.tech session. Stage 1 is a local, unauthenticated
+  proof of the WASM target.
+-->
+<script>
+  // Theme resolves before paint: stored choice > OS preference > light.
+  // (The desktop shell's exact script and storage key, so a visitor's
+  // choice is one choice across both surfaces.)
+  (function () {
+    var choice = "system";
+    try { choice = localStorage.getItem("phextron.theme") || "system"; } catch (e) {}
+    var dark = choice === "dark" ||
+      (choice === "system" && window.matchMedia &&
+       window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.documentElement.dataset.themeChoice = choice;
+  })();
+</script>
+<style>
+  :root {
+    --paper: #f7f5ef; --ink: #23211a; --muted: #6d675a; --line: #ddd7c8;
+    --card: #fffdf7; --accent: #3c46c8; --ok: #1e7d3a; --warn: #a86a00;
+    --bad: #b03030; --hold: #7a4fa3;
+  }
+  html[data-theme="dark"] {
+    --paper: #1a1915; --ink: #eae7db; --muted: #a49d8b; --line: #3a382e;
+    --card: #23221c; --accent: #969ae9; --ok: #6fce8b; --warn: #e0aa4e;
+    --bad: #ef8a8a; --hold: #c39be8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 16px 22px 10px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: .14em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  button {
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--accent); }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 22px 0; align-items: baseline; }
+  nav button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  nav .note { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
+  main { padding: 16px 22px 30px; max-width: 1180px; }
+  .src { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  .src b { color: var(--ink); font-weight: 600; }
+  .banner {
+    background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;
+  }
+  .banner .coord { color: var(--muted); font-size: 12px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 3px 12px; font-size: 13px;
+  }
+  .chip b { font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; background: var(--card); }
+  th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; font-size: 13.5px; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .st { font-weight: 600; white-space: nowrap; }
+  .st-up { color: var(--ok); } .st-down { color: var(--bad); }
+  .st-no-access { color: var(--warn); } .st-thermal-hold { color: var(--hold); }
+  .st-not-in-pull { color: var(--muted); }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 16px; max-width: 720px;
+  }
+  .card h2 { margin: 0 0 6px; font-size: 16px; }
+  .badge {
+    display: inline-block; font-size: 11px; border: 1px solid var(--line);
+    border-radius: 4px; padding: 1px 6px; color: var(--muted); margin-left: 8px;
+    vertical-align: middle; text-transform: uppercase; letter-spacing: .06em;
+  }
+  footer { padding: 0 22px 20px; color: var(--muted); font-size: 12.5px; }
+  .err { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>PHEXTRON</h1>
+  <span class="sub">the Exocortex console — web UI, rendered by the WASM build of the console's Rust code</span>
+  <span class="spacer"></span>
+  <!-- SSO integration point: phext.tech single sign-on renders its control
+       here in stage 2. No local auth exists or is implied in stage 1. -->
+  <span id="sso-slot" class="sub">sign-on: phext.tech SSO · stage 2</span>
+  <button id="refreshBtn" type="button">Refresh</button>
+  <button id="themeBtn" type="button">Theme: System</button>
+</header>
+<nav aria-label="Dashboards">
+  <button type="button" aria-selected="true">Ranch Nodes</button>
+  <span class="note">rendered by phextron-web (WASM) · remaining panels port in stage 2</span>
+</nav>
+<main id="panel"><p class="src">Loading…</p></main>
+<footer>
+  Phextron web UI · canonical host tron.phext.io · panels read live machine-readable sources only — never rendered pages.
+  Auth: phext.tech single sign-on — this surface runs no auth of its own.
+</footer>
+<script src="/web/glue.js"></script>
+</body>
+</html>

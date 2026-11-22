@@ -1,0 +1,18 @@
+[package]
+name = "phextron-web"
+version = "0.1.0"
+edition = "2021"
+description = "Phextron web UI — the console's panels rendered client-side from the console's own Rust code compiled to WebAssembly. Canonical host: tron.phext.io. Stage 1: the WASM target, the shell page, and the ranch-nodes panel."
+license = "MIT"
+
+# Standalone on purpose — NOT a member of the desktop workspace. The web
+# target carries zero dependencies (see README.md: the toolchain choice and
+# its dependency count are recorded there), and detaching this crate keeps
+# the desktop workspace's tree out of the browser build entirely.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 2
