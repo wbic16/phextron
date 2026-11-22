@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phextron — the Exocortex console</title>
+<script>
+  // Theme resolves before paint: stored choice > OS preference > light.
+  (function () {
+    var choice = "system";
+    try { choice = localStorage.getItem("phextron.theme") || "system"; } catch (e) {}
+    var dark = choice === "dark" ||
+      (choice === "system" && window.matchMedia &&
+       window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.documentElement.dataset.themeChoice = choice;
+  })();
+</script>
+<style>
+  :root {
+    --paper: #f7f5ef; --ink: #23211a; --muted: #6d675a; --line: #ddd7c8;
+    --card: #fffdf7; --accent: #3c46c8; --ok: #1e7d3a; --warn: #a86a00;
+    --bad: #b03030; --hold: #7a4fa3;
+  }
+  html[data-theme="dark"] {
+    --paper: #1a1915; --ink: #eae7db; --muted: #a49d8b; --line: #3a382e;
+    --card: #23221c; --accent: #969ae9; --ok: #6fce8b; --warn: #e0aa4e;
+    --bad: #ef8a8a; --hold: #c39be8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 16px 22px 10px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: .14em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  button {
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--accent); }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 22px 0; }
+  nav button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  main { padding: 16px 22px 30px; max-width: 1180px; }
+  .src { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  .src b { color: var(--ink); font-weight: 600; }
+  .banner {
+    background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;
+  }
+  .banner .coord { color: var(--muted); font-size: 12px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 3px 12px; font-size: 13px;
+  }
+  .chip b { font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; background: var(--card); }
+  th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; font-size: 13.5px; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .st { font-weight: 600; white-space: nowrap; }
+  .st-up { color: var(--ok); } .st-down { color: var(--bad); }
+  .st-no-access { color: var(--warn); } .st-thermal-hold { color: var(--hold); }
+  .st-not-in-pull { color: var(--muted); }
+  .top { color: var(--muted); font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 16px; max-width: 720px;
+  }
+  .card h2 { margin: 0 0 6px; font-size: 16px; }
+  .badge {
+    display: inline-block; font-size: 11px; border: 1px solid var(--line);
+    border-radius: 4px; padding: 1px 6px; color: var(--muted); margin-left: 8px;
+    vertical-align: middle; text-transform: uppercase; letter-spacing: .06em;
+  }
+  footer { padding: 0 22px 20px; color: var(--muted); font-size: 12.5px; }
+  .err { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>PHEXTRON</h1>
+  <span class="sub">the Exocortex console — every panel reads its live source directly</span>
+  <span class="spacer"></span>
+  <button id="refreshBtn" type="button">Refresh</button>
+  <button id="themeBtn" type="button">Theme: System</button>
+</header>
+<nav id="tabs" aria-label="Dashboards"></nav>
+<main id="panel"><p class="src">Loading…</p></main>
+<footer>
+  Phextron stage 1 · panels read live machine-readable sources only — never rendered pages.
+  Serving-layer auth per the console rulings: Desktop SSO for humans, MCP Auth for agents.
+</footer>
+<script>
+  var PANELS = [], current = "nodes";
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function num(v, suffix) {
+    if (v === null || v === undefined) return "—";
+    return esc(v) + (suffix || "");
+  }
+
+  function renderNodes(d) {
+    var b = d.body, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    if (b.distilled) {
+      out += '<div class="banner"><div>' + esc(b.distilled.summary) + '</div>' +
+             '<div class="coord">state.phext · newest distilled entry ' + esc(b.distilled.ts) +
+             ' · register: ' + esc(b.distilled.scrolls) + ' scrolls, ' + esc(b.distilled.entries) +
+             ' entries · ' + esc(b.distilled.register_age) + '</div></div>';
+    }
+    var order = ["up", "thermal-hold", "no-access", "down", "not-in-pull"];
+    out += '<div class="chips"><span class="chip">roster <b>' + esc(b.roster_count) + '</b></span>';
+    order.forEach(function (k) {
+      if (b.counts[k]) out += '<span class="chip">' + esc(k) + ' <b>' + esc(b.counts[k]) + '</b></span>';
+    });
+    out += '</div>';
+    out += '<table><thead><tr><th>Node</th><th>Status</th><th>Load</th><th>Cores</th>' +
+           '<th>Tctl °C</th><th>GPU °C</th><th>Ollama</th><th>Render</th><th>Gateway</th><th>Top</th></tr></thead><tbody>';
+    b.rows.forEach(function (r) {
+      var per = (r.load !== null && r.ncpu) ? " (" + (r.load / r.ncpu).toFixed(2) + "/core)" : "";
+      out += '<tr><td><b>' + esc(r.display) + '</b>' +
+             (r.enabled ? "" : ' <span class="badge">disabled</span>') +
+             '<br><span class="top">' + esc(r.ip) + '</span></td>' +
+             '<td class="st st-' + esc(r.status) + '">' + esc(r.status) + '</td>' +
+             '<td class="num">' + num(r.load) + per + '</td>' +
+             '<td class="num">' + num(r.ncpu) + '</td>' +
+             '<td class="num">' + num(r.tctl_c) + '</td>' +
+             '<td class="num">' + num(r.gpu_c) + '</td>' +
+             '<td>' + esc(r.ollama || "—") + '</td>' +
+             '<td>' + esc(r.render || "—") + '</td>' +
+             '<td>' + esc(r.gateway || "—") + '</td>' +
+             '<td class="top" title="' + esc(r.top) + '">' + esc(r.top || "") + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    return out;
+  }
+
+  function renderRecon(d) {
+    return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+      esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
+      '<div class="card"><h2>' + esc(d.title) +
+      '<span class="badge">stage ' + esc(d.body.stage) + ' · recon</span></h2>' +
+      '<p>' + esc(d.body.needs) + '</p></div>';
+  }
+
+  function renderDegraded(d) {
+    return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' + esc(d.source.location) + '</p>' +
+      '<div class="card"><h2>' + esc(d.title) + '<span class="badge">degraded</span></h2>' +
+      '<p class="err">' + esc(d.body.error || d.source.freshness) + '</p></div>';
+  }
+
+  function load(id) {
+    current = id;
+    var tabs = document.querySelectorAll("#tabs button");
+    tabs.forEach(function (t) { t.setAttribute("aria-selected", t.dataset.id === id ? "true" : "false"); });
+    fetch("/api/panels/" + id)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var el = document.getElementById("panel");
+        if (d.state === "live" && d.id === "nodes") el.innerHTML = renderNodes(d);
+        else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
+        else el.innerHTML = renderRecon(d);
+      })
+      .catch(function (e) {
+        document.getElementById("panel").innerHTML =
+          '<p class="err">Panel failed to load: ' + esc(e.message) + '</p>';
+      });
+  }
+
+  fetch("/api/panels")
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      PANELS = d.panels;
+      var nav = document.getElementById("tabs");
+      PANELS.forEach(function (p) {
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = p.title; b.dataset.id = p.id;
+        b.setAttribute("aria-selected", p.id === current ? "true" : "false");
+        b.addEventListener("click", function () { load(p.id); });
+        nav.appendChild(b);
+      });
+      load(current);
+    });
+
+  document.getElementById("refreshBtn").addEventListener("click", function () { load(current); });
+
+  var themeBtn = document.getElementById("themeBtn");
+  function themeLabel() {
+    var c = document.documentElement.dataset.themeChoice || "system";
+    themeBtn.textContent = "Theme: " + c.charAt(0).toUpperCase() + c.slice(1);
+  }
+  themeBtn.addEventListener("click", function () {
+    var order = ["system", "light", "dark"];
+    var c = document.documentElement.dataset.themeChoice || "system";
+    var next = order[(order.indexOf(c) + 1) % order.length];
+    try { localStorage.setItem("phextron.theme", next); } catch (e) {}
+    var dark = next === "dark" ||
+      (next === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.documentElement.dataset.themeChoice = next;
+    themeLabel();
+  });
+  themeLabel();
+</script>
+</body>
+</html>
