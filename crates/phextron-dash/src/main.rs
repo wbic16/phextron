@@ -37,14 +37,17 @@ use std::net::TcpListener;
 
 const SHELL: &str = include_str!("../web/shell.html");
 
-/// The Emise v2 typeface — Will's handwriting-derived font, the
-/// kerning pass of 2026-11-21 ("Emise 2.000; wbic16", fontRevision
-/// 2.0; canonical asset: emise-font/out/Emise-v2.ttf, SHA-256
-/// 3d792cb2c400c0dc862f51edeb4939ecea70601bc31ab8fb57c329b01560f4c8,
-/// the legibility-corrected build). Embedded like the shell and
-/// served at /fonts/Emise-v2.ttf; the shell's @font-face names it
-/// as the console's primary UI font (Will, 2026-11-22, EE 9).
-const EMISE_V2_TTF: &[u8] = include_bytes!("../web/fonts/Emise-v2.ttf");
+/// The Emise v3 typeface — Will's handwriting-derived font, cut
+/// 2026-11-22 by the first handwriting-practice session (the
+/// practiced-hand pass over v2; "Emise 3.000; wbic16", fontRevision
+/// 3.0; canonical asset: emise-font/out/Emise-v3.ttf, SHA-256
+/// 3b277f81bb9384c963a79c6ad67fb717bb47ee8086171a0ec034614d78d304aa,
+/// QC PASS; rolled out on Will's approval, 2026-11-22). Embedded
+/// like the shell and served at /fonts/Emise-v3.ttf; the shell's
+/// @font-face names it as the console's primary UI font (Will,
+/// 2026-11-22, EE 9). Emise-v2.ttf stays in web/fonts/ as the
+/// one-step rollback.
+const EMISE_V3_TTF: &[u8] = include_bytes!("../web/fonts/Emise-v3.ttf");
 
 fn security_headers() -> &'static str {
     "X-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'\r\n"
@@ -115,11 +118,11 @@ fn handle(mut stream: std::net::TcpStream) {
     let registry = panels::registry();
     match path.as_str() {
         "/" => respond(&mut stream, "200 OK", "text/html; charset=utf-8", SHELL),
-        "/fonts/Emise-v2.ttf" => respond_bytes(
+        "/fonts/Emise-v3.ttf" => respond_bytes(
             &mut stream,
             "200 OK",
             "font/ttf",
-            EMISE_V2_TTF,
+            EMISE_V3_TTF,
             security_headers(),
         ),
         "/web" | "/web/" => serve_web(&mut stream, "index.html", "text/html; charset=utf-8"),
