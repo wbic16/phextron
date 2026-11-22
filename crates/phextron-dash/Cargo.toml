@@ -10,5 +10,5 @@ name = "phextron"
 path = "src/main.rs"
 
 [dependencies]
-libphext = "0.6.4"
+libphext = "0.6.6"
 serde_json = "1"
