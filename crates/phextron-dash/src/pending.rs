@@ -1,4 +1,5 @@
-//! Recon panels for the four domains whose readers land in stages 2–5.
+//! Recon panels for the three domains whose readers land in stages 3–5.
+//! (Jenkins graduated to a live panel in stage 2 — see `jenkins.rs`.)
 //! Each names its live source (from docs/RECON.md), where that source runs,
 //! how fresh it is, and what the reader still needs. No fabricated data:
 //! a domain whose reader is not built yet says so on its face.
@@ -17,18 +18,6 @@ pub struct PendingPanel {
 }
 
 impl PendingPanel {
-    pub fn jenkins() -> Self {
-        PendingPanel {
-            id: "jenkins",
-            title: "Jenkins Instances",
-            stage: 2,
-            source_name: "Jenkins controller REST API (/api/json)".into(),
-            source_location: "aletheia-core — http://100.88.154.1:8080 (tailnet); 16 jobs, 22 agents registered today".into(),
-            freshness: "live API, answers in real time once the reader holds read access".into(),
-            needs: "Read-only API access under the console auth ruling (Desktop SSO for humans, MCP Auth for agents). jenkins.phext.io does not resolve today; per-node Jenkins servers are planned (fleet task) but only agents exist so far — the panel will show the one controller honestly until that changes.".into(),
-        }
-    }
-
     pub fn video() -> Self {
         PendingPanel {
             id: "video",

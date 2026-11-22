@@ -14,6 +14,7 @@
 //! Config: PHEXTRON_PORT (default 8901), PHEXTRON_BIND (default 127.0.0.1),
 //! plus the per-panel source paths documented in each reader module.
 
+mod jenkins;
 mod nodes;
 mod panels;
 mod pending;

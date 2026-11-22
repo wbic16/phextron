@@ -1,0 +1,1 @@
+{"_class":"hudson.model.Queue","items":[{"_class":"hudson.model.Queue$WaitingItem","blocked":false,"buildable":false,"inQueueSince":1795307098881,"stuck":false,"task":{"_class":"hudson.model.FreeStyleProject","name":"fixture-slow","url":"http://127.0.0.1:18081/job/fixture-slow/"},"why":"Finished waiting"}]}

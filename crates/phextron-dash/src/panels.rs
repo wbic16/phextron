@@ -70,7 +70,7 @@ pub trait Panel: Send + Sync {
 pub fn registry() -> Vec<Box<dyn Panel>> {
     vec![
         Box::new(crate::nodes::NodesPanel),
-        Box::new(crate::pending::PendingPanel::jenkins()),
+        Box::new(crate::jenkins::JenkinsPanel),
         Box::new(crate::pending::PendingPanel::video()),
         Box::new(crate::pending::PendingPanel::cloud()),
         Box::new(crate::pending::PendingPanel::phexts()),

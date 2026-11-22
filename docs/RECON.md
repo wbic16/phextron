@@ -68,6 +68,45 @@ Gaps, named:
   what exists per node today is agents of the one controller. The panel will
   show one instance until that changes, and say so.
 
+**Stage 2 outcome (2026-11-21):** the reader is built (`src/jenkins.rs` in
+phextron-dash) — jobs with last-build result/duration/age, the queue, and
+the 22 agents with online/offline state, all from the REST API, read by a
+small std HTTP client (no new dependencies). Two facts changed since the
+recon above:
+
+- **The controller's realm is now the house LDAP** (`LDAPSecurityRealm`,
+  verified in the live `config.xml`), not the local user database the
+  stage-1 setup created. The staged local-admin credential file
+  (`/var/lib/jenkins/admin-credentials.txt`) no longer authenticates —
+  basic auth with it answers 401 — and anonymous reads answer 403. House
+  scripts that still read that file for API checks will fail the same way;
+  that is a gap in the source's own housekeeping, recorded here.
+- Because the realm is LDAP, the reader's read-only identity must be
+  provisioned — a step only Will can take. Until then the panel degrades
+  honestly: it asks the API, gets the 403, and says so on its face. The
+  reader was verified end to end against a scratch Jenkins 2.580.2 (the
+  production controller's exact version, stood up on loopback on
+  aletheia-core, production untouched) whose API responses are the test
+  fixtures in `crates/phextron-dash/tests/fixtures/`.
+
+Provisioning steps (Will's hands, one time):
+
+1. Create a read-only service account for the console in the house LDAP
+   (suggested name: `phextron-ro`) with a strong password
+2. Sign in to Jenkins as an administrator
+3. Open Manage Jenkins → Security → Authorization (project matrix)
+4. Add `phextron-ro` to the matrix
+5. Grant it Read only: Overall/Read, Job/Read, Agent/Read — no Build,
+   Configure, or Administer grants
+6. Sign in to Jenkins as `phextron-ro`
+7. Open the account menu → Configure → API Token → Add new Token
+8. Name the token `phextron-dash` and click Generate
+9. Set `PHEXTRON_JENKINS_USER=phextron-ro` and
+   `PHEXTRON_JENKINS_TOKEN=<the generated token>` in the console process's
+   environment (never in the repo)
+10. Restart the console — the Jenkins panel goes live and shows
+    "reading as phextron-ro" on its face
+
 ## 3. All phexts — source exists; reader lands stage 3
 
 - **VM register corpus**: `~/workspace/phext/*.phext` — 27 phexts (incipit,

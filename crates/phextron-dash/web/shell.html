@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Phextron — the Exocortex console</title>
 <script>
   // Theme resolves before paint: stored choice > OS preference > light.
@@ -68,6 +69,11 @@
   .st-up { color: var(--ok); } .st-down { color: var(--bad); }
   .st-no-access { color: var(--warn); } .st-thermal-hold { color: var(--hold); }
   .st-not-in-pull { color: var(--muted); }
+  .st-SUCCESS { color: var(--ok); } .st-FAILURE { color: var(--bad); }
+  .st-UNSTABLE { color: var(--warn); } .st-BUILDING { color: var(--accent); }
+  .st-ABORTED, .st-NOT_BUILT, .st-DISABLED { color: var(--muted); }
+  .st-online { color: var(--ok); } .st-offline { color: var(--bad); }
+  .st-held { color: var(--warn); }
   .top { color: var(--muted); font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 6px;
@@ -94,7 +100,7 @@
 <nav id="tabs" aria-label="Dashboards"></nav>
 <main id="panel"><p class="src">Loading…</p></main>
 <footer>
-  Phextron stage 1 · panels read live machine-readable sources only — never rendered pages.
+  Phextron stage 2 · panels read live machine-readable sources only — never rendered pages.
   Serving-layer auth per the console rulings: Desktop SSO for humans, MCP Auth for agents.
 </footer>
 <script>
@@ -147,6 +153,54 @@
     return out;
   }
 
+  function renderJenkins(d) {
+    var b = d.body, c = b.controller, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="banner"><div>Controller: <b>Jenkins ' + esc(c.version || "—") +
+           '</b> · mode ' + esc(c.mode || "—") +
+           (c.quieting_down ? ' · <b>quieting down</b>' : '') +
+           (c.reading_as ? ' · reading as ' + esc(c.reading_as) : '') +
+           '</div><div class="coord">one controller exists today — the ranch nodes are its agents; per-node Jenkins servers are the fleet plan, not the present fact</div></div>';
+    var cnt = b.counts || {};
+    out += '<div class="chips"><span class="chip">jobs <b>' + esc(b.jobs.length) + '</b></span>';
+    ["SUCCESS", "FAILURE", "UNSTABLE", "BUILDING", "NOT_BUILT"].forEach(function (k) {
+      if (cnt[k]) out += '<span class="chip">' + esc(k.toLowerCase().replace("_", " ")) + ' <b>' + esc(cnt[k]) + '</b></span>';
+    });
+    out += '<span class="chip">agents online <b>' + esc(b.agents_summary.online) + '/' + esc(b.agents_summary.total) + '</b></span>' +
+           '<span class="chip">executors busy <b>' + num(b.agents_summary.executors_busy) + '/' + num(b.agents_summary.executors_total) + '</b></span>' +
+           '<span class="chip">queue <b>' + esc(b.queue.length) + '</b></span></div>';
+    out += '<table><thead><tr><th>Job</th><th>Last build</th><th>Result</th><th>Duration</th><th>Finished</th></tr></thead><tbody>';
+    b.jobs.forEach(function (j) {
+      out += '<tr><td><b>' + esc(j.name) + '</b>' +
+             (j.buildable ? "" : ' <span class="badge">disabled</span>') +
+             (j.in_queue ? ' <span class="badge">in queue</span>' : "") + '</td>' +
+             '<td class="num">' + (j.last_number === null ? "—" : "#" + esc(j.last_number)) + '</td>' +
+             '<td class="st st-' + esc(j.result) + '">' + esc(j.result.replace("_", " ")) + '</td>' +
+             '<td class="num">' + esc(j.duration || "—") + '</td>' +
+             '<td>' + esc(j.age || "—") + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    out += '<table style="margin-top:14px"><thead><tr><th>Agent</th><th>Status</th><th>Executors</th><th>Load</th><th>Note</th></tr></thead><tbody>';
+    b.agents.forEach(function (a) {
+      out += '<tr><td><b>' + esc(a.name) + '</b></td>' +
+             '<td class="st st-' + esc(a.status_key) + '">' + esc(a.status) + '</td>' +
+             '<td class="num">' + esc(a.executors) + '</td>' +
+             '<td>' + (a.status_key === "online" ? (a.idle ? "idle" : "busy") : "—") + '</td>' +
+             '<td class="top" title="' + esc(a.cause) + '">' + esc(a.cause || "") + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    if (b.queue.length) {
+      out += '<div class="card" style="margin-top:14px"><h2>Queue</h2>';
+      b.queue.items.forEach(function (q) {
+        out += '<p>' + esc(q.job) + ' — ' + esc(q.why) +
+               (q.waiting ? ' · waiting ' + esc(q.waiting) : '') + '</p>';
+      });
+      out += '</div>';
+    }
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -170,6 +224,7 @@
       .then(function (d) {
         var el = document.getElementById("panel");
         if (d.state === "live" && d.id === "nodes") el.innerHTML = renderNodes(d);
+        else if (d.state === "live" && d.id === "jenkins") el.innerHTML = renderJenkins(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

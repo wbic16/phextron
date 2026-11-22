@@ -11,10 +11,21 @@ plumbing. A domain whose live source does not exist yet gets a panel that
 names the gap on its face; the five-domain source map and the stage 2–5
 build order live in `../../docs/RECON.md`.
 
-Stage 1 (this build): the framework plus the **ranch-nodes panel** live end
-to end — fleet roster (ranch-proxy `nodes.json`), the sampler's latest
-fanout pull (`last-pull.json`: status, load, Tctl, GPU, service markers),
-and the distilled `state.phext` register parsed with libphext.
+Stage 1: the framework plus the **ranch-nodes panel** live end to end —
+fleet roster (ranch-proxy `nodes.json`), the sampler's latest fanout pull
+(`last-pull.json`: status, load, Tctl, GPU, service markers), and the
+distilled `state.phext` register parsed with libphext.
+
+Stage 2: the **Jenkins panel** live end to end — the fleet's one controller
+(aletheia-core) read through its own REST API: jobs with last-build result,
+duration and age, the build queue, and the controller's registered agents
+(the ranch nodes) with online/offline state. The controller's realm is the
+house LDAP and anonymous reads are refused, so the reader authenticates
+with a read-only API token from the environment (`PHEXTRON_JENKINS_URL`,
+`PHEXTRON_JENKINS_USER`, `PHEXTRON_JENKINS_TOKEN`). Until that identity is
+provisioned (steps in `../../docs/RECON.md` §2) the panel degrades
+honestly, naming the refusal it got; it never fabricates job or agent
+state.
 
 Stack: Rust across the program (Will's ruling, 2026-11-21) — std-first HTTP
 in the phext-lattice / markdown-wizard lineage. This crate's dependencies
@@ -33,6 +44,9 @@ cargo build --release -p phextron-dash
 PHEXTRON_NODES_JSON=/path/to/nodes.json \
 PHEXTRON_LAST_PULL=/path/to/last-pull.json \
 PHEXTRON_STATE_PHEXT=/path/to/state.phext \
+PHEXTRON_JENKINS_URL=http://100.88.154.1:8080 \
+PHEXTRON_JENKINS_USER=<read-only identity> \
+PHEXTRON_JENKINS_TOKEN=<that identity's API token> \
 PHEXTRON_PORT=8901 ../../target/release/phextron
 ```
 
