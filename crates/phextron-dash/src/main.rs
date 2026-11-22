@@ -1,4 +1,4 @@
-//! Phextron — the Exocortex console (stage 4).
+//! Phextron — the Exocortex console (stages 1–4 + the Data panel).
 //!
 //! A std-first Rust server in the phext-lattice / markdown-wizard lineage:
 //! no web framework, no dependency tree beyond libphext (the reference phext
@@ -14,6 +14,7 @@
 //! Config: PHEXTRON_PORT (default 8901), PHEXTRON_BIND (default 127.0.0.1),
 //! plus the per-panel source paths documented in each reader module.
 
+mod data;
 mod jenkins;
 mod nodes;
 mod panels;

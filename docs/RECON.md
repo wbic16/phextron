@@ -306,3 +306,30 @@ corpora, GitHub GraphQL diskUsage for the account); render unmeasured
 entries as named gaps, never as zeroes; and treat counted=no detail
 scrolls as drill-down under their counted parent so the estate total
 stays honest.
+
+Panel outcome (2026-11-21, task 25.7.9/8.7.10/7.7.10): the Data
+panel is live in crates/phextron-dash (src/data.rs). It reads
+stash.phext itself with libphext from the synced snapshot
+(~/phextron-data/phext-vm/stash.phext; PHEXTRON_DATA_STASH_PHEXT
+overrides the location), computes the SHA-256 of the register bytes
+it read and puts it on its face (the census build's hash verified
+live: 4dcd956e20c41fb13b42aab63b5b49f2829b791e44540c7c1593b54f001
+ef206), and renders the Home scroll's builder-computed totals as
+written — 67 stashes, 1,953,371,966,239 bytes (1.95 TB) measured
+over 45 counted entries, 9 unmeasured gaps. The 13 counted=no
+detail scrolls nest under their counted parents (Hub home
+(wbic16); GitHub account (wbic16)) and never enter the totals; the
+9 unmeasured stashes render as named GAP rows with their reasons.
+Where the console host is a stash's own host — declared via
+PHEXTRON_DATA_LOCAL_HOSTS, never guessed, since register paths are
+host-relative — a stat re-probe refreshes what a stat can honestly
+refresh (a file's size and mtime; a directory's mtime only), and a
+failed probe falls back to the register value on the row's face;
+every other row carries the register value with its census stamp.
+A missing or Home-less register degrades by name. Verified in
+headless Chromium on aletheia-core: live + degraded, light + dark,
+zero console errors (docs/screenshots/data-*.png). Register
+observation carried forward: the ni-knight archive root was probed
+at 19:32 CST, before the archive (task 30.4.6/5.5.8/4.4.8) landed —
+the entry stands as census truth until the next census, and the
+panel renders it as written.

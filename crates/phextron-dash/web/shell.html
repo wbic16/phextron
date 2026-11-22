@@ -74,6 +74,9 @@
   .st-ABORTED, .st-NOT_BUILT, .st-DISABLED { color: var(--muted); }
   .st-online { color: var(--ok); } .st-offline { color: var(--bad); }
   .st-held { color: var(--warn); }
+  .st-gap { color: var(--warn); font-weight: 600; }
+  tr.detail td:first-child { padding-left: 30px; }
+  tr.gap td { background: var(--paper); }
   .top { color: var(--muted); font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 6px;
@@ -100,7 +103,7 @@
 <nav id="tabs" aria-label="Dashboards"></nav>
 <main id="panel"><p class="src">Loading…</p></main>
 <footer>
-  Phextron stage 4 · panels read live machine-readable sources only — never rendered pages.
+  Phextron · panels read live machine-readable sources only — never rendered pages.
   Serving-layer auth per the console rulings: Desktop SSO for humans, MCP Auth for agents.
 </footer>
 <script>
@@ -287,6 +290,74 @@
     return out;
   }
 
+  // Decimal units with two decimals — the same human() the stash
+  // register's builder renders, so a size on this panel always matches
+  // the figure the register itself prints (fmtBytes above is the
+  // phexts panel's binary rendering of its own census).
+  function fmtBytes10(n) {
+    if (n === null || n === undefined) return "\u2014";
+    var units = [["TB", 1e12], ["GB", 1e9], ["MB", 1e6], ["KB", 1e3]];
+    for (var i = 0; i < units.length; i++) {
+      if (n >= units[i][1]) return (n / units[i][1]).toFixed(2) + " " + units[i][0];
+    }
+    return n + " B";
+  }
+
+  function renderData(d) {
+    var b = d.body, r = b.register, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">stashes <b>' + esc(r.stashes_recorded) + '</b></span>' +
+           '<span class="chip">measured <b title="' + esc(r.total_measured_bytes) + ' bytes (counted entries only)">' +
+           esc(r.total_measured_human) + '</b></span>' +
+           '<span class="chip">counted <b>' + esc(r.counted_entries) + '</b></span>' +
+           '<span class="chip">detail <b>' + esc(r.detail_entries) + '</b></span>' +
+           '<span class="chip">gaps <b>' + esc(r.gap_entries) + '</b></span>' +
+           '<span class="chip">census <b>' + esc(r.census_date) + '</b></span></div>';
+    out += '<div class="banner"><div><b>stash.phext</b> · the estate stash census · ' +
+           esc(r.entries_parsed) + ' entries parsed · sha256 ' + esc(String(r.sha256).slice(0, 12)) +
+           '… · snapshot updated ' + esc(r.file_age) + '</div><div class="coord">by kind: ' +
+           r.by_kind.map(function (k) { return esc(k.kind) + ' ' + esc(k.count) + ' — ' + esc(k.bytes_human); }).join(' · ') +
+           '</div></div>';
+    out += '<table><thead><tr><th>Stash</th><th>Kind</th><th>Host</th><th>Size</th><th>Items</th><th>Freshness</th><th>Read method</th><th>Coverage</th></tr></thead><tbody>';
+    b.rows.forEach(function (row) {
+      var cls = row.gap ? ' class="gap"' : (row.detail ? ' class="detail"' : '');
+      var badges = "";
+      if (row.detail) badges += '<span class="badge">detail' + (row.parent ? ' of ' + esc(row.parent) : '') + '</span>';
+      if (row.gap) badges += '<span class="badge">gap</span>';
+      if (row.probe.mode === "live-file" || row.probe.mode === "live-dir") badges += '<span class="badge">live stat</span>';
+      if (row.probe.mode === "failed") badges += '<span class="badge">stat failed</span>';
+      var size;
+      if (row.gap) {
+        size = '<span class="st-gap">unmeasured</span>' +
+               (row.size_note ? '<br><span class="top">' + esc(row.size_note) + '</span>' : '');
+      } else if (row.probe.mode === "live-file" && row.probe.size_bytes !== row.size_bytes) {
+        size = esc(fmtBytes10(row.probe.size_bytes)) +
+               '<br><span class="top">register: ' + esc(fmtBytes10(row.size_bytes)) + '</span>';
+      } else {
+        size = '<span title="' + esc(row.size_bytes) + ' bytes">' + esc(fmtBytes10(row.size_bytes)) + '</span>' +
+               (row.size_note ? '<br><span class="top">' + esc(row.size_note) + '</span>' : '');
+      }
+      var fresh = esc(row.freshness);
+      if (row.probe.mode === "live-file" || row.probe.mode === "live-dir") {
+        fresh += '<br><span class="top">stat ' + esc(row.probe.age) + '</span>';
+      }
+      out += '<tr' + cls + '><td><b>' + esc(row.name) + '</b>' + badges +
+             '<br><span class="top" title="' + esc(row.path) + '">' + esc(row.path) + '</span>' +
+             (row.notes ? '<br><span class="top" title="' + esc(row.notes) + '">' + esc(row.notes) + '</span>' : '') +
+             '</td>' +
+             '<td>' + esc(row.kind) + '</td>' +
+             '<td>' + esc(row.host) + '</td>' +
+             '<td class="num">' + size + '</td>' +
+             '<td>' + esc(row.items || "—") + '</td>' +
+             '<td>' + fresh + '</td>' +
+             '<td>' + esc(row.read_method) + '</td>' +
+             '<td>' + esc(row.coverage) + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -313,6 +384,7 @@
         else if (d.state === "live" && d.id === "jenkins") el.innerHTML = renderJenkins(d);
         else if (d.state === "live" && d.id === "phexts") el.innerHTML = renderPhexts(d);
         else if (d.state === "live" && d.id === "video") el.innerHTML = renderVideo(d);
+        else if (d.state === "live" && d.id === "data") el.innerHTML = renderData(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })
