@@ -100,7 +100,7 @@
 <nav id="tabs" aria-label="Dashboards"></nav>
 <main id="panel"><p class="src">Loading…</p></main>
 <footer>
-  Phextron stage 2 · panels read live machine-readable sources only — never rendered pages.
+  Phextron stage 3 · panels read live machine-readable sources only — never rendered pages.
   Serving-layer auth per the console rulings: Desktop SSO for humans, MCP Auth for agents.
 </footer>
 <script>
@@ -201,6 +201,52 @@
     return out;
   }
 
+  function fmtBytes(n) {
+    if (n === null || n === undefined) return "\u2014";
+    if (n < 1024) return n + " B";
+    var units = ["KB", "MB", "GB", "TB"], v = n, i = -1;
+    do { v /= 1024; i++; } while (v >= 1024 && i < units.length - 1);
+    return v.toFixed(1) + " " + units[i];
+  }
+
+  function renderPhexts(d) {
+    var b = d.body, t = b.totals, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> \u00b7 ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">phexts <b>' + esc(t.phexts) + '</b></span>' +
+           '<span class="chip">total <b>' + esc(fmtBytes(t.bytes)) + '</b></span>' +
+           '<span class="chip">scrolls <b>' + esc(t.scrolls) + '</b></span>' +
+           '<span class="chip">corpora live <b>' + esc(t.corpora_live) + '/' + esc(t.corpora_total) + '</b></span>';
+    if (t.parse_failures) out += '<span class="chip">parse failures <b>' + esc(t.parse_failures) + '</b></span>';
+    out += '</div>';
+    b.corpora.forEach(function (c) {
+      if (c.state === "live") {
+        out += '<div class="banner"><div><b>' + esc(c.label) + '</b> \u00b7 ' + esc(c.host) +
+               ' \u00b7 ' + esc(c.phexts) + ' phexts \u00b7 ' + esc(fmtBytes(c.bytes)) + ' \u00b7 ' + esc(c.scrolls) + ' scrolls' +
+               (c.parse_failures ? ' \u00b7 ' + esc(c.parse_failures) + ' parse failures' : '') +
+               '</div><div class="coord">' + esc(c.location) + ' \u00b7 newest file ' + esc(c.newest_age) + '</div></div>';
+      } else {
+        out += '<div class="card" style="margin-bottom:14px;max-width:none"><h2>' + esc(c.label) +
+               '<span class="badge">degraded</span></h2>' +
+               '<p class="err">' + esc(c.error) + '</p>' +
+               '<p class="coord">' + esc(c.host) + ' \u00b7 ' + esc(c.location) + '</p></div>';
+      }
+    });
+    out += '<table><thead><tr><th>Phext</th><th>Corpus</th><th>Size</th><th>Scrolls</th><th>Updated</th></tr></thead><tbody>';
+    b.rows.forEach(function (r) {
+      var scrolls = (r.scrolls === null)
+        ? '<span class="err" title="' + esc(r.parse_error || "") + '">parse failed</span>'
+        : esc(r.scrolls);
+      out += '<tr><td><b>' + esc(r.name) + '</b><br><span class="top">' + esc(r.file) + '</span></td>' +
+             '<td>' + esc(r.corpus_label) + '</td>' +
+             '<td class="num">' + esc(fmtBytes(r.bytes)) + '</td>' +
+             '<td class="num">' + scrolls + '</td>' +
+             '<td>' + esc(r.age) + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -225,6 +271,7 @@
         var el = document.getElementById("panel");
         if (d.state === "live" && d.id === "nodes") el.innerHTML = renderNodes(d);
         else if (d.state === "live" && d.id === "jenkins") el.innerHTML = renderJenkins(d);
+        else if (d.state === "live" && d.id === "phexts") el.innerHTML = renderPhexts(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

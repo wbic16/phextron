@@ -1,4 +1,4 @@
-//! Phextron — the Exocortex console (stage 1).
+//! Phextron — the Exocortex console (stage 3).
 //!
 //! A std-first Rust server in the phext-lattice / markdown-wizard lineage:
 //! no web framework, no dependency tree beyond libphext (the reference phext
@@ -18,6 +18,7 @@ mod jenkins;
 mod nodes;
 mod panels;
 mod pending;
+mod phexts;
 
 use std::io::{Read, Write};
 use std::net::TcpListener;

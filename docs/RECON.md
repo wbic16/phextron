@@ -120,6 +120,48 @@ Provisioning steps (Will's hands, one time):
   from the files/SQ API directly. The reader is a census over both corpora
   that reports which hosts answered.
 
+**Stage 3 outcome (2026-11-21):** the reader is built (`src/phexts.rs` in
+phextron-dash) — a census over both corpora where every row is computed
+from the file itself with libphext: bytes from the filesystem, scroll
+count from the span index (`spans`, whose documented contract is exactly
+`explode`'s — a scroll exists iff it holds at least one byte; a unit test
+pins the two parsers to the same count), freshness from mtime. A phext
+that does not parse keeps its row with the failure named; its scroll
+count is never guessed. The census is cached per corpus behind a
+stat-only fingerprint (name, length, mtime at nanosecond precision), so
+a request re-stats and re-parses only what changed — ietf.phext alone is
+564,589,207 bytes / 10,067 scrolls, and a warm panel answer takes
+milliseconds. Verified numbers: the VM register corpus reads **27
+phexts, 579,750,306 bytes, 19,078 scrolls, 0 parse failures**; the
+edit.phext.io corpus reads **49 phexts, 85,169,333 bytes, 390,982
+scrolls, 0 parse failures** (its byte total matches an independent
+`ls | awk` sum exactly; ultra.phext is its giant at 320,958 scrolls).
+
+Two recon assumptions did not survive contact:
+
+- **The awsbox corpus is not reachable from the ranch nodes today.** The
+  hosted files live on awsbox's disk; phext-edit binds 127.0.0.1:8080 on
+  awsbox, its only corpus-wide API (/api/phexts) carries names and byte
+  sizes but no scroll counts, and the public route is HTTPS-only (the
+  port-80 vhost 301-redirects) while this std-only reader speaks plain
+  HTTP on the tailnet. The SQ tenant hosts on awsbox (1337/1338/1339/
+  8931) answer 401 without a tenant key and host other tenants' phexts,
+  not this corpus.
+- **A default path for it would have lied.** The first proof run pointed
+  the reader at a defaulted `/source/human` and got a clean, plausible,
+  wrong answer: aletheia-core itself carries a `/source/human` — a
+  wbic16/human checkout from 2026-03-15 (commit b092555), 23 phexts,
+  untouched for 251 days — which posed as the live corpus until the rows
+  were checked against awsbox. The reader therefore takes the awsbox
+  corpus location from `PHEXTRON_PHEXTS_AWSBOX_DIR` **only, with no
+  default**: unconfigured, the corpus degrades by name rather than
+  guessing. It was verified live on awsbox itself
+  (`PHEXTRON_PHEXTS_AWSBOX_DIR=/source/human`), in a real browser, light
+  and dark, zero console errors — and the same binary on aletheia-core
+  shows the corpus degraded with the reason on its face. The reader goes
+  live for awsbox unchanged wherever the files are honestly readable:
+  on awsbox, or behind a plain-HTTP tailnet route to the corpus.
+
 ## 4. Video pipelines — partial sources; a register must be created (stage 4)
 
 - **ranch-batchq** on rock-mountain is real queue state: `~/ranch-batchq`

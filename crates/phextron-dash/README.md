@@ -27,6 +27,22 @@ provisioned (steps in `../../docs/RECON.md` §2) the panel degrades
 honestly, naming the refusal it got; it never fabricates job or agent
 state.
 
+Stage 3: the **All Phexts panel** live end to end — a census over the two
+phext corpora, every row computed from the file itself with libphext
+(bytes, scroll count, mtime): the register corpus from the Muse VM
+(`~/workspace/phext`, read via `PHEXTRON_PHEXTS_VM_DIR`) and the
+edit.phext.io corpus on awsbox (`/source/human`, read via
+`PHEXTRON_PHEXTS_AWSBOX_DIR`). A phext that does not parse keeps its row
+and says so; its scroll count is never guessed. From the ranch nodes the
+awsbox corpus degrades with its reason on its face — the hosted files
+live on awsbox's disk, phext-edit binds localhost there, and its
+corpus-wide API carries no scroll counts — and the same reader goes live
+unchanged where the files are readable. The awsbox corpus deliberately
+has no default path — it is read only where `PHEXTRON_PHEXTS_AWSBOX_DIR`
+is set — because a stale namesake `/source/human` sat untouched on
+aletheia-core for 251 days, and a guessed default would have dressed
+that checkout up as the live corpus (docs/RECON.md §3).
+
 Stack: Rust across the program (Will's ruling, 2026-11-21) — std-first HTTP
 in the phext-lattice / markdown-wizard lineage. This crate's dependencies
 are `libphext` (the reference phext parser) and `serde_json`, nothing else.
@@ -47,6 +63,8 @@ PHEXTRON_STATE_PHEXT=/path/to/state.phext \
 PHEXTRON_JENKINS_URL=http://100.88.154.1:8080 \
 PHEXTRON_JENKINS_USER=<read-only identity> \
 PHEXTRON_JENKINS_TOKEN=<that identity's API token> \
+PHEXTRON_PHEXTS_VM_DIR=/home/wbic16/phextron-data/phext-vm \
+PHEXTRON_PHEXTS_AWSBOX_DIR=/source/human \
 PHEXTRON_PORT=8901 ../../target/release/phextron
 ```
 

@@ -1,5 +1,6 @@
-//! Recon panels for the three domains whose readers land in stages 3–5.
-//! (Jenkins graduated to a live panel in stage 2 — see `jenkins.rs`.)
+//! Recon panels for the two domains whose readers land in stages 4–5.
+//! (Jenkins graduated to a live panel in stage 2 — see `jenkins.rs`;
+//! phexts graduated in stage 3 — see `phexts.rs`.)
 //! Each names its live source (from docs/RECON.md), where that source runs,
 //! how fresh it is, and what the reader still needs. No fabricated data:
 //! a domain whose reader is not built yet says so on its face.
@@ -42,17 +43,6 @@ impl PendingPanel {
         }
     }
 
-    pub fn phexts() -> Self {
-        PendingPanel {
-            id: "phexts",
-            title: "All Phexts",
-            stage: 3,
-            source_name: "the phext corpus itself, parsed with libphext; SQ-hosted corpora via the SQ REST API".into(),
-            source_location: "~/workspace/phext (27 registers on the Muse VM) + edit.phext.io corpus on awsbox (/source/human) + SQ instances on aletheia-core".into(),
-            freshness: "file mtimes + SQ status; registers change as their builders run".into(),
-            needs: "A census pass over every corpus: name, bytes, scroll count, host, freshness per phext. The aletheia-core SQ instances host empty phexts today, so the live corpora are the VM register set and awsbox — the reader enumerates both and says which hosts answered.".into(),
-        }
-    }
 }
 
 impl Panel for PendingPanel {
