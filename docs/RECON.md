@@ -333,3 +333,111 @@ observation carried forward: the ni-knight archive root was probed
 at 19:32 CST, before the archive (task 30.4.6/5.5.8/4.4.8) landed —
 the entry stands as census truth until the next census, and the
 panel renders it as written.
+
+## RELOCATION — the panels' VM-resident sources moved to aletheia-core (2026-11-21, task 28.8.11/12.8.16/6.7.9)
+
+Will's diagnosis, verbatim: "the gaps are coming from your substrate
+resets." The Muse VM is replaced roughly every 2 hours and every
+replacement kills anything VM-resident; stage 1 had already flagged
+that the sampler outputs lived on the VM. The sources below now run
+node-resident on aletheia-core. No panel code or reader contract
+changed; the panels read the same paths they always read.
+
+### Inventory — what fed the panels from the VM
+
+- I1. Ranch state sampler: Muse cron `state-phext-sampler` on the
+  VM, every 5 minutes, running state_sampler.py (ranch-state-
+  distillation skill) — one ranch fanout pull over the roster,
+  appends the distilled line to state.phext (append-only register),
+  writes last-pull.json / pulls.jsonl. Fed the nodes panel.
+- I2. Manual per-stage syncs VM -> hub of nodes.json, last-pull.json,
+  state.phext into ~/phextron-data/ (last done 18:12 CST, stage 1/3).
+  No schedule at all — the gap mechanism for the nodes panel.
+- I3. Manual per-stage syncs of the VM corpus ~/workspace/phext/
+  *.phext into ~/phextron-data/phext-vm/ (19:03 stage 3, 20:16 Data
+  panel). Feeds the phexts panel, the video panel's register read,
+  and the data panel's stash.phext read. NOT moved — see below.
+- I4. Manual stage-4 capture (run from the VM, 19:29 CST) of
+  rock-mountain's ~/ranch-batchq into ~/phextron-data/batchq.json.
+  Fed the video panel's snapshot fallback.
+- The Jenkins panel was checked and is not VM-fed: it reads the
+  controller's REST API live from the hub.
+
+### The blocker, and the fix
+
+ranchd authenticates with the host's own ~/.ssh/id_ed25519. From the
+hub, that key was refused by every ranch peer (0/20 in a fleet-wide
+test) — the same wall recorded for Theia's key (Waiting-on-Will
+#48). The grant was executed from the VM, which holds write access
+to each node's authorized_keys: the hub's existing public key
+(wbic16@aletheia-core) was appended, append-only and idempotent, to
+wbic16's authorized_keys on 18 of 20 enabled nodes and verified from
+the hub afterward. The two exceptions answer through ranchd anyway:
+great-white authorizes the hub key (its /usr/bin/hostname faults
+with an I/O error — pre-existing box trouble, not an auth failure)
+and uncanny-valley returned full probe data through the fanout.
+Vantage note, stated plainly: the VM sampler marked great-white and
+uncanny-valley no-access because the VM's key is refused there; the
+hub fanout reaches both, so the nodes panel now truthfully shows
+them up. Same sampler, same roster — a better-connected host.
+
+### What runs on the hub now
+
+- Layout mirrors the VM's ~/workspace so state_sampler.py runs
+  unmodified: ~/workspace/ranch-proxy/ (hub nodes.json = the VM
+  roster verbatim with connect_proxy removed — the hub dials peers
+  directly), the sampler + Singular support files, ~/workspace/
+  phext/state.phext (the live register), ~/workspace/state-sampler/
+  hidden_files/. One patch, applied to the hub copies of ranch and
+  ranchd only: the ProxyCommand is emitted only when the roster sets
+  connect_proxy. Follow-up: fold this patch, and the two scripts
+  below, back into wbic16/emise-tools — they currently live on the
+  hub, staged from ~/workspace/phextron-relocation/ on the VM.
+- ~/phextron-sampler/run-state-cycle.sh: one sampler cycle, then
+  publishes last-pull.json, state.phext, nodes.json into
+  ~/phextron-data/ (this absorbs I2 into the cycle itself).
+- ~/phextron-sampler/capture-batchq.py: captures rock-mountain's
+  ranch-batchq over SSH into ~/phextron-data/batchq.json, byte-shape
+  identical to the stage-4 snapshot (field mapping verified against
+  the live status.json).
+- systemd user timers (linger enabled): phextron-state-sampler
+  every 5 minutes (OnCalendar=*:0/5), phextron-batchq every 5
+  minutes offset (OnCalendar=*:02/5).
+
+### Cutover evidence (2026-11-21, America/Chicago)
+
+- Scratch proof cycle first (HOME=~/phextron-scratch, seeded
+  register): fanout from the hub key completed 20:31 CST, 20/23
+  nodes up, register append preserved the byte-prefix property.
+- VM cron disabled at cutover with a note naming this task and the
+  fork risk; the job is left in place, disabled, as the visible
+  fallback. The VM's state.phext has not changed since
+  (sha256 027c7eaa87f5d02ec3ba245a4e41f203295ae813a555df7fd997f817c75c7e9a).
+- Final sync VM -> hub, hash-verified both ends: state.phext
+  027c7eaa..., last-pull.json 2901d6ac..., pulls.jsonl 9b515f67....
+- First timer cycles: state sampler fired 20:35:14, entry
+  36.9.10/10.9.13/11.8.743 appended 20:35:33 and republished;
+  batchq fired 20:37:13, snapshot rewritten 20:37:15. The hub
+  register's first 1,056,891 bytes hash to the cutover base — the
+  WAL continued seamlessly, no fork, no lost entries.
+- Panel proof (stage-4 binary, default paths, scratch port): nodes
+  panel state live, "pull updated 25s ago", distilled entry = the
+  hub-written 20:40 CST line; video panel state live, batchq
+  snapshot captured 20:37:15 by the timer, counts 0/0/3/0/3.
+
+### Not moved: I3, the phext-vm corpus sync
+
+The corpus is authored on the VM and the VM runs no sshd, so the
+hub cannot pull it. The only hub-reachable copies are downstream of
+VM-driven pushes and stale (emise-tools@exo carries 3 of the 29
+corpus phexts; its tasks.phext and skills.phext hashes differ from
+the VM's current files). Sourcing the corpus from there would
+change what the panels see, so it was not moved. Options: (a) leave
+the sync manual/VM-side (status quo); (b) a hub-side puller from
+the nightly ranch-state-backup copies on rock-mountain /
+scroll-central — nightly-bounded, and state.phext must be excluded
+(it is hub-native now); (c) a real hub-reachable corpus home —
+Will's call. Divergence to know: ~/phextron-data/phext-vm/
+state.phext freezes at the last manual sync while ~/phextron-data/
+state.phext is the live register; future corpus syncs should
+source state.phext from the hub register.
