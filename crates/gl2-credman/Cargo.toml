@@ -1,0 +1,8 @@
+[package]
+name = "gl2-credman"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Phextron G-L2: thin Windows Credential Manager binding via direct advapi32/shell32 FFI (no windows crate, no keyring abstraction)"
+
+[dependencies]
