@@ -21,6 +21,7 @@
 //! its own for the web surface, per Will's 2026-11-21 ruling.
 
 mod data;
+mod inkling;
 mod jenkins;
 mod nodes;
 mod panels;

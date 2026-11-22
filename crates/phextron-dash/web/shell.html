@@ -79,6 +79,10 @@
   .st-checked { color: var(--ok); } .st-not-checked { color: var(--bad); }
   .st-unavailable { color: var(--warn); }
   .st-idle, .st-reservoir, .st-rolling, .st-exempt, .st-na { color: var(--muted); }
+  .st-serving { color: var(--ok); } .st-installing { color: var(--accent); }
+  .st-blocked { color: var(--bad); } .st-unrecorded { color: var(--muted); }
+  td code { font-size: 12.5px; user-select: all; }
+  .copybtn { padding: 1px 7px; font-size: 11.5px; margin-left: 6px; }
   .sub-note { color: var(--muted); font-size: 12px; }
   tr.detail td:first-child { padding-left: 30px; }
   tr.gap td { background: var(--paper); }
@@ -414,6 +418,69 @@
     return out;
   }
 
+  function copyEndpoint(btn) {
+    var text = btn.getAttribute("data-ep") || "";
+    function done() {
+      var old = btn.textContent;
+      btn.textContent = "copied";
+      setTimeout(function () { btn.textContent = old; }, 1200);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, done);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta); done();
+    }
+  }
+
+  function renderInkling(d) {
+    var b = d.body, s = b.summary, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">nodes <b>' + esc(s.nodes) + '</b></span>' +
+           '<span class="chip">serving <b>' + esc(s.serving) + '</b></span>' +
+           '<span class="chip">installing <b>' + esc(s.installing) + '</b></span>' +
+           '<span class="chip">held <b>' + esc(s.held) + '</b></span>' +
+           '<span class="chip">blocked <b>' + esc(s.blocked) + '</b></span>' +
+           (s.unrecorded ? '<span class="chip">unrecorded <b>' + esc(s.unrecorded) + '</b></span>' : '') +
+           '<span class="chip">state as of <b>' + esc(b.as_of.local || "—") + '</b></span></div>';
+    out += '<div class="banner"><div>Every node serves the same OpenAI-compatible API on port ' +
+           esc(b.port) + ' — <b>/health</b>, <b>/v1/chat/completions</b>, <b>/v1/models</b>.</div>' +
+           '<div class="coord">' + esc(b.caveat) + ':<br><code>' + esc(b.example) + '</code></div></div>';
+    out += '<table><thead><tr><th>Node</th><th>Endpoint</th><th>Quant</th><th>Status</th><th>Progress / completion</th><th>Detail</th></tr></thead><tbody>';
+    b.rows.forEach(function (r) {
+      var ep = r.endpoint
+        ? '<code>' + esc(r.endpoint) + '</code>' +
+          '<button type="button" class="copybtn" data-ep="' + esc(r.endpoint) +
+          '" onclick="copyEndpoint(this)">copy</button>'
+        : '<span class="sub-note">no tailnet address on record</span>';
+      var prog;
+      if (r.status === "serving") {
+        prog = 'completed ' + esc(r.completed_local || "—") +
+               '<div class="sub-note">EE ' + esc(r.ee) + '</div>';
+      } else if (r.status === "installing" && r.percent !== null && r.percent !== undefined) {
+        prog = esc(r.percent.toFixed(1)) + '% of the model file';
+      } else {
+        prog = "—";
+      }
+      out += '<tr><td><b>' + esc(r.name) + '</b> <span class="sub-note">' + esc(r.initials) +
+             ' · ' + esc(r.ram_gb) + ' GB</span>' +
+             (r.ip ? '<br><span class="top">' + esc(r.ip) + '</span>' : '') + '</td>' +
+             '<td>' + ep + '</td>' +
+             '<td>' + esc(r.quant || "—") + '</td>' +
+             '<td class="st st-' + esc(r.status) + '">' + esc(r.status.toUpperCase()) + '</td>' +
+             '<td>' + prog + '</td>' +
+             '<td class="top" title="' + esc(r.detail || "") + '">' + esc(r.detail || "") + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    out += '<p class="src" style="margin-top:10px">Deployment states ride the register, not a live probe: ' +
+           'the as-of stamp above is the evidence time of the freshest deployment sweep. ' +
+           'Refresh the register from the rollout records with <b>build_inkling_apis_phext.py</b> in ~/workspace/phext.</p>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -442,6 +509,7 @@
         else if (d.state === "live" && d.id === "video") el.innerHTML = renderVideo(d);
         else if (d.state === "live" && d.id === "data") el.innerHTML = renderData(d);
         else if (d.state === "live" && d.id === "substrates") el.innerHTML = renderSubstrates(d);
+        else if (d.state === "live" && d.id === "inkling") el.innerHTML = renderInkling(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

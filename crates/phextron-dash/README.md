@@ -59,6 +59,22 @@ unavailable** and names the gap rather than showing a confident state;
 Local's dispatch cell reads ranch-batchq, the same queue the Video panel
 samples. Source map: `../../docs/RECON.md`, SUBSTRATES section.
 
+Inkling APIs panel (task 20.7.10/10.7.12/7.8.8): one row per grid node
+(24) — the node's Inkling-2-Mini endpoint (`http://<tailnet-ip>:8090`,
+OpenAI-compatible: `/health`, `/v1/chat/completions`), its quant, its
+deployment state (serving / installing with progress / held / blocked),
+and the Exocortical Epoch of its completion where it has finished. The
+roster is read from `wiring.phext` (the declaration of record — its
+machine-checked `node:` lines, parsed with libphext); deployment state
+rides `inkling-apis.phext`, a register built from the rollout records
+of task 35.10.9/13.9.17/8.9.12 by `build_inkling_apis_phext.py`
+(~/workspace/phext, beside the other register builders). The console
+does not live-probe the nodes: states are exactly as fresh as the
+register's as-of stamp, printed on the panel's face, and a node with
+no register scroll reads **unrecorded** rather than a guessed state.
+The page carries the client caveat on its face: the ranch HTTP proxy
+intercepts tailnet-IP requests — bypass it (`curl --noproxy '*'`).
+
 Stack: Rust across the program (Will's ruling, 2026-11-21) — std-first HTTP
 in the phext-lattice / markdown-wizard lineage. This crate's dependencies
 are `libphext` (the reference phext parser) and `serde_json`, nothing else.
@@ -82,11 +98,13 @@ PHEXTRON_JENKINS_TOKEN=<that identity's API token> \
 PHEXTRON_PHEXTS_VM_DIR=/home/wbic16/phextron-data/phext-vm \
 PHEXTRON_PHEXTS_AWSBOX_DIR=/source/human \
 PHEXTRON_SUBSTRATES_CHECKS_PHEXT=/home/wbic16/phextron-data/phext-vm/substrate-checks.phext \
+PHEXTRON_INKLING_WIRING_PHEXT=/home/wbic16/phextron-data/phext-vm/wiring.phext \
+PHEXTRON_INKLING_APIS_PHEXT=/home/wbic16/phextron-data/phext-vm/inkling-apis.phext \
 PHEXTRON_PORT=8901 ../../target/release/phextron
 ```
 
 Then open http://127.0.0.1:8901/ — JSON at `/api/panels` and
-`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts, data, substrates).
+`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts, data, substrates, inkling).
 
 ## Adding a panel
 
