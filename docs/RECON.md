@@ -441,3 +441,53 @@ Will's call. Divergence to know: ~/phextron-data/phext-vm/
 state.phext freezes at the last manual sync while ~/phextron-data/
 state.phext is the live register; future corpus syncs should
 source state.phext from the hub register.
+
+## SUBSTRATES — coverage at a glance (2026-11-21, W4 plan §1.10, task 31.8.11/9.7.13/8.7.10)
+
+Will's direction (2026-11-21 23:04 CST): *"Phextron should show me,
+at a glance, if any substrates are missing dispatched work and if
+I've checked the token budget within the substrate's reset window."*
+The panel (`crates/phextron-dash/src/substrates.rs`) carries one row
+per substrate (Claude, Grok, Muse, ChatGPT, Google/Antigravity,
+Local) with exactly two signals per row. Its sources, honestly
+mapped:
+
+- **Budget checked — a new register, created by this task.**
+  `substrate-checks.phext` lives with the other registers in
+  ~/workspace/phext (Home scroll + one scroll per recorded check)
+  and reaches the console through the same phext-vm snapshot sync
+  as stash.phext and pipelines.phext (the sync is manual/VM-side —
+  see RELOCATION above — and the panel's freshness line carries the
+  snapshot file's age, so a stale snapshot is visible on its face).
+  The write path is `crates/phextron-dash/tools/mark-substrate-check.py`:
+  the console is read-only today (no console actions exist), so a
+  steering pass — or Will — records a check by running the script,
+  and the panel picks the scroll up on its next read. The panel
+  derives Checked/NOT CHECKED against the current reset window
+  (Claude Wed 22:00, Grok Thu 20:23, Muse Fri 16:10,
+  America/Chicago; the US DST rule is implemented directly, as in
+  the video panel). A check from a previous window never carries
+  over. Google/Antigravity rolls (latest check shown, never
+  flagged); ChatGPT is exempt (reservoir); Local is unmetered.
+  The register starts empty: until the first check is recorded,
+  the three windowed rows read NOT CHECKED — which is the fact the
+  panel exists to surface.
+- **Dispatched work — mostly no live source yet, and the rows say
+  so.** No register records per-substrate dispatch state in a form
+  the console can read: costs.phext/accounting.phext carry no
+  per-substrate dispatch atoms; Claude's planned source (the §1.9
+  session registry) is not built and the per-node Claude
+  distribution is still rolling out; Grok and Google/Antigravity
+  work rides mailboxes and tooling repos (wbic16/grok-tools,
+  wbic16/neon-tools), not a readable register. Those four rows read
+  **source unavailable** with the gap named — only a real source
+  verdict can ever read MISSING, so nothing shows a confident state
+  from absent data. ChatGPT's cell shows its reservoir state (never
+  flagged). Local is wired: ranch-batchq, read the same way the
+  video panel reads it (live queue directories via
+  `PHEXTRON_SUBSTRATES_BATCHQ_DIR`, else the shared snapshot at
+  /home/wbic16/phextron-data/batchq.json) — pending/running reads
+  dispatched, an empty queue reads idle, no read path reads
+  unavailable. When a real dispatch source lands for a windowed
+  substrate (the §1.9 registry first), its verdict drops into the
+  derivation the panel already tests.

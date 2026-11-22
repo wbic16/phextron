@@ -75,6 +75,11 @@
   .st-online { color: var(--ok); } .st-offline { color: var(--bad); }
   .st-held { color: var(--warn); }
   .st-gap { color: var(--warn); font-weight: 600; }
+  .st-present { color: var(--ok); } .st-missing { color: var(--bad); }
+  .st-checked { color: var(--ok); } .st-not-checked { color: var(--bad); }
+  .st-unavailable { color: var(--warn); }
+  .st-idle, .st-reservoir, .st-rolling, .st-exempt, .st-na { color: var(--muted); }
+  .sub-note { color: var(--muted); font-size: 12px; }
   tr.detail td:first-child { padding-left: 30px; }
   tr.gap td { background: var(--paper); }
   .top { color: var(--muted); font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -358,6 +363,57 @@
     return out;
   }
 
+  function renderSubstrates(d) {
+    var b = d.body, s = b.summary, r = b.checks_register, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">substrates <b>' + esc(b.rows.length) + '</b></span>' +
+           '<span class="chip">missing work <b>' + esc(s.missing) + '</b></span>' +
+           '<span class="chip">budgets not checked <b>' + esc(s.not_checked) + '</b></span>' +
+           '<span class="chip">dispatch sources unavailable <b>' + esc(s.unavailable) + '</b></span>' +
+           '<span class="chip">checks recorded <b>' + esc(r.checks_recorded) + '</b></span></div>';
+    out += '<table><thead><tr><th>Substrate</th><th>Reset window</th><th>Dispatched work</th><th>Budget checked</th></tr></thead><tbody>';
+    b.rows.forEach(function (row) {
+      var w = row.window, win;
+      if (w.kind === "weekly") {
+        win = esc(w.label) + '<div class="sub-note">window opened ' + esc(w.start_local) +
+              ' · resets ' + esc(w.next_local) + ' (in ' + esc(w.resets_in) + ')</div>';
+      } else {
+        win = esc(w.label);
+      }
+      var disp = '<span class="st st-' + esc(row.dispatch.state) + '">' +
+                 esc(row.dispatch.state.replace("_", " ").toUpperCase()) + '</span>' +
+                 '<div class="sub-note">' + esc(row.dispatch.detail) + '</div>';
+      var bud = row.budget, btxt;
+      if (bud.state === "checked") {
+        btxt = '<span class="st st-checked">CHECKED</span> ' + esc(bud.checked_local) +
+               '<div class="sub-note">' + esc(bud.age) + '</div>';
+      } else if (bud.state === "not_checked") {
+        btxt = '<span class="st st-not-checked">NOT CHECKED</span>' +
+               '<div class="sub-note">no check recorded in the current window</div>';
+      } else if (bud.state === "rolling") {
+        btxt = '<span class="st st-rolling">ROLLING</span>' +
+               (bud.checked_local
+                 ? '<div class="sub-note">last check ' + esc(bud.checked_local) + ' · ' + esc(bud.age) + '</div>'
+                 : '<div class="sub-note">no check recorded</div>');
+      } else if (bud.state === "exempt") {
+        btxt = '<span class="st st-exempt">EXEMPT</span>' +
+               '<div class="sub-note">context reservoir — no reset window' +
+               (bud.checked_local ? ' · last check ' + esc(bud.checked_local) : '') + '</div>';
+      } else {
+        btxt = '<span class="st st-na">—</span>' +
+               '<div class="sub-note">unmetered — no budget check</div>';
+      }
+      out += '<tr><td><b>' + esc(row.label) + '</b></td><td>' + win + '</td>' +
+             '<td>' + disp + '</td><td>' + btxt + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    out += '<p class="src" style="margin-top:10px">A budget check is a recorded event: ' +
+           'mark one with <b>tools/mark-substrate-check.py &lt;substrate&gt;</b> in this repo — ' +
+           'checks from a previous window never carry over.</p>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -385,6 +441,7 @@
         else if (d.state === "live" && d.id === "phexts") el.innerHTML = renderPhexts(d);
         else if (d.state === "live" && d.id === "video") el.innerHTML = renderVideo(d);
         else if (d.state === "live" && d.id === "data") el.innerHTML = renderData(d);
+        else if (d.state === "live" && d.id === "substrates") el.innerHTML = renderSubstrates(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

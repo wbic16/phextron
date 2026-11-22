@@ -69,7 +69,9 @@ pub trait Panel: Send + Sync {
 /// The five domains of Will's 2026-11-21 directive, in shell order,
 /// plus the Data panel (stash task 25.7.9/8.7.10/7.7.10): Phextron's
 /// visibility into everywhere Will has stashed data, read from the
-/// stash.phext census register.
+/// stash.phext census register — and the Substrates panel (W4 plan
+/// §1.10, task 31.8.11/9.7.13/8.7.10): per-substrate dispatched-work
+/// and budget-check coverage against the reset-window clock.
 pub fn registry() -> Vec<Box<dyn Panel>> {
     vec![
         Box::new(crate::nodes::NodesPanel),
@@ -78,5 +80,6 @@ pub fn registry() -> Vec<Box<dyn Panel>> {
         Box::new(crate::pending::PendingPanel::cloud()),
         Box::new(crate::phexts::PhextsPanel),
         Box::new(crate::data::DataPanel),
+        Box::new(crate::substrates::SubstratesPanel),
     ]
 }

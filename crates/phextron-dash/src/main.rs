@@ -26,6 +26,7 @@ mod nodes;
 mod panels;
 mod pending;
 mod phexts;
+mod substrates;
 mod video;
 
 use std::io::{Read, Write};

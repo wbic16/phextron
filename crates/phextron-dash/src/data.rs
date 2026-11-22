@@ -80,8 +80,9 @@ fn age_from_unix(ts: u64, now: u64) -> String {
 
 /// SHA-256 (FIPS 180-4), std-only. The panel hashes the register bytes
 /// it read so the read is verifiable against the source register's
-/// known hash without growing the dependency lineage.
-fn sha256_hex(data: &[u8]) -> String {
+/// known hash without growing the dependency lineage. Shared with the
+/// substrates panel, which puts the same provenance on its register.
+pub(crate) fn sha256_hex(data: &[u8]) -> String {
     const K: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
         0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,

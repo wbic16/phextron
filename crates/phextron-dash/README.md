@@ -43,6 +43,22 @@ is set — because a stale namesake `/source/human` sat untouched on
 aletheia-core for 251 days, and a guessed default would have dressed
 that checkout up as the live corpus (docs/RECON.md §3).
 
+Substrates panel (W4 plan §1.10, task 31.8.11/9.7.13/8.7.10): one row per
+AI substrate (Claude, Grok, Muse, ChatGPT, Google/Antigravity, Local)
+with two at-a-glance signals — dispatched work in the substrate's current
+reset window (or MISSING), and whether the token budget was checked
+within that window (or NOT CHECKED). Budget checks are recorded events in
+`substrate-checks.phext` (same register pattern as the Data panel's
+stash.phext), written by `tools/mark-substrate-check.py` — the console is
+read-only today, so the script is the write path. Reset windows are the
+substrate-steering constants (Claude Wed 22:00, Grok Thu 20:23, Muse Fri
+16:10, America/Chicago; Google rolls; ChatGPT is a reservoir, Local
+unmetered). Where a substrate has no live dispatch source yet (Claude's
+is the §1.9 session registry, still to be built), the row says **source
+unavailable** and names the gap rather than showing a confident state;
+Local's dispatch cell reads ranch-batchq, the same queue the Video panel
+samples. Source map: `../../docs/RECON.md`, SUBSTRATES section.
+
 Stack: Rust across the program (Will's ruling, 2026-11-21) — std-first HTTP
 in the phext-lattice / markdown-wizard lineage. This crate's dependencies
 are `libphext` (the reference phext parser) and `serde_json`, nothing else.
@@ -65,11 +81,12 @@ PHEXTRON_JENKINS_USER=<read-only identity> \
 PHEXTRON_JENKINS_TOKEN=<that identity's API token> \
 PHEXTRON_PHEXTS_VM_DIR=/home/wbic16/phextron-data/phext-vm \
 PHEXTRON_PHEXTS_AWSBOX_DIR=/source/human \
+PHEXTRON_SUBSTRATES_CHECKS_PHEXT=/home/wbic16/phextron-data/phext-vm/substrate-checks.phext \
 PHEXTRON_PORT=8901 ../../target/release/phextron
 ```
 
 Then open http://127.0.0.1:8901/ — JSON at `/api/panels` and
-`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts).
+`/api/panels/<id>` (nodes, jenkins, video, cloud, phexts, data, substrates).
 
 ## Adding a panel
 
