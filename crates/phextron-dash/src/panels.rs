@@ -71,7 +71,7 @@ pub fn registry() -> Vec<Box<dyn Panel>> {
     vec![
         Box::new(crate::nodes::NodesPanel),
         Box::new(crate::jenkins::JenkinsPanel),
-        Box::new(crate::pending::PendingPanel::video()),
+        Box::new(crate::video::VideoPanel),
         Box::new(crate::pending::PendingPanel::cloud()),
         Box::new(crate::phexts::PhextsPanel),
     ]

@@ -179,6 +179,34 @@ Two recon assumptions did not survive contact:
   last-frame/finish timestamps — so the panel reads one live source instead
   of walking build trees. Defining it is stage 4's first step.
 
+**Stage 4 outcome (2026-11-21)**: the register now exists and the panel
+reads it. `pipelines.phext` lives in `~/workspace/phext` on the house
+pattern — `pipelines-source.json` is the source of truth,
+`build_pipelines_phext.py` builds it (generated Home scroll, rollups
+computed from the entries, `--check` CURRENT by sha256), and
+`update_pipeline.py` is the writer path a pipeline updates its own
+entry through (edit JSON, stamp, rebuild, verify). One scroll per
+pipeline: name, kind (film / animation / training / other), state
+summary, last activity, the source its truth lives in, updated stamp.
+Seeded with four entries, each verified against its own record at seed
+time: Wavefront film program (V16 final delivered 2026-11-09), Scrolltown
+animation (active; exercises ex01-ex03 generated and in gate validation
+2026-11-21), the phext training video (rough cut 2026-11-10; polish tier
+open on Will's steps), and the ranch-batchq standing queue (idle).
+
+The panel (`crates/phextron-dash/src/video.rs`) parses the register with
+libphext and reads ranch-batchq two ways: live from the queue
+directories where they are readable (`PHEXTRON_VIDEO_BATCHQ_DIR`), else
+from the snapshot document the VM-side sync writes beside the other
+phextron snapshots (`~/phextron-data/batchq.json`), with the capture
+stamp on its face. The two sources degrade independently: register rows
+show with the queue section degraded by name, and a missing register
+degrades the panel while the freshness line still reports the queue.
+One correction to the recon above, from the seed read: the queue's jobs
+to date are eval/classify jobs, not renders, and its runner's last
+status write was 2026-11-19 (`no_jobs`) — the register entry says both,
+and the panel shows the queue as the standing batch queue it is.
+
 ## 5. Cloud AI projects — weakest source; lands stage 5
 
 - **What exists**: `costs.phext` (the taxicab ledger — token and Will-Time

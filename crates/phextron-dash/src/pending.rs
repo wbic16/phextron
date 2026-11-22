@@ -1,6 +1,7 @@
-//! Recon panels for the two domains whose readers land in stages 4–5.
+//! Recon panel for the one domain whose reader lands in stage 5.
 //! (Jenkins graduated to a live panel in stage 2 — see `jenkins.rs`;
-//! phexts graduated in stage 3 — see `phexts.rs`.)
+//! phexts graduated in stage 3 — see `phexts.rs`; video graduated in
+//! stage 4 — see `video.rs`.)
 //! Each names its live source (from docs/RECON.md), where that source runs,
 //! how fresh it is, and what the reader still needs. No fabricated data:
 //! a domain whose reader is not built yet says so on its face.
@@ -19,18 +20,6 @@ pub struct PendingPanel {
 }
 
 impl PendingPanel {
-    pub fn video() -> Self {
-        PendingPanel {
-            id: "video",
-            title: "Video Pipelines",
-            stage: 4,
-            source_name: "ranch-batchq queue state + render markers in the ranch fanout pull".into(),
-            source_location: "rock-mountain ~/ranch-batchq (pending/running/done/failed dirs + ranch-batchq-status); Wavefront and Scrolltown build state on aletheia-core".into(),
-            freshness: "queue dirs are live filesystem state; render markers refresh with every 5-minute fanout pull".into(),
-            needs: "A fleet-wide pipeline register does not exist yet: queue state is per-node directories and film/animation progress lives in goal records and build trees. Stage 4 first defines the small phext register the pipelines write, then reads it.".into(),
-        }
-    }
-
     pub fn cloud() -> Self {
         PendingPanel {
             id: "cloud",

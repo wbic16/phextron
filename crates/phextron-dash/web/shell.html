@@ -100,7 +100,7 @@
 <nav id="tabs" aria-label="Dashboards"></nav>
 <main id="panel"><p class="src">Loading…</p></main>
 <footer>
-  Phextron stage 3 · panels read live machine-readable sources only — never rendered pages.
+  Phextron stage 4 · panels read live machine-readable sources only — never rendered pages.
   Serving-layer auth per the console rulings: Desktop SSO for humans, MCP Auth for agents.
 </footer>
 <script>
@@ -247,6 +247,46 @@
     return out;
   }
 
+  function renderVideo(d) {
+    var b = d.body, reg = b.register, q = b.batchq, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">pipelines <b>' + esc(reg.pipelines) + '</b></span>';
+    Object.keys(reg.by_kind).forEach(function (k) {
+      out += '<span class="chip">' + esc(k) + ' <b>' + esc(reg.by_kind[k]) + '</b></span>';
+    });
+    out += '<span class="chip">newest activity <b>' + esc(reg.newest_activity) + '</b></span></div>';
+    if (q.mode === "degraded") {
+      out += '<div class="card" style="margin-bottom:14px;max-width:none"><h2>ranch-batchq' +
+             '<span class="badge">degraded</span></h2>' +
+             '<p class="err">' + esc(q.error) + '</p>' +
+             '<p class="coord">rock-mountain · ~/ranch-batchq</p></div>';
+    } else {
+      var c = q.counts;
+      out += '<div class="banner"><div><b>ranch-batchq</b> · rock-mountain · pending <b>' +
+             esc(c.pending) + '</b> · running <b>' + esc(c.running) + '</b> · done <b>' +
+             esc(c.done) + '</b> · failed <b>' + esc(c.failed) + '</b> · outputs <b>' +
+             esc(c.outputs) + '</b></div>' +
+             '<div class="coord">' +
+             (q.mode === "live-dir" ? 'queue directories read live at request time' :
+              'snapshot captured ' + esc(q.captured_age) + ' — the queue lives on rock-mountain; the snapshot is the read path from this host') +
+             (q.status_updated_at ? ' · runner status ' + esc(q.status_updated_at) : '') +
+             (q.reason ? ' · ' + esc(q.reason) : '') +
+             '</div></div>';
+    }
+    out += '<table><thead><tr><th>Pipeline</th><th>Kind</th><th>State</th><th>Last activity</th><th>Entry updated</th><th>Source of truth</th></tr></thead><tbody>';
+    b.rows.forEach(function (r) {
+      out += '<tr><td><b>' + esc(r.name) + '</b><br><span class="top">' + esc(r.coordinate) + '</span></td>' +
+             '<td>' + esc(r.kind) + '</td>' +
+             '<td>' + esc(r.state) + '</td>' +
+             '<td style="white-space:nowrap">' + esc(r.last_activity) + '<br><span class="top">' + esc(r.activity_age) + '</span></td>' +
+             '<td style="white-space:nowrap">' + esc(r.updated) + '</td>' +
+             '<td class="top" title="' + esc(r.source) + '">' + esc(r.source) + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -272,6 +312,7 @@
         if (d.state === "live" && d.id === "nodes") el.innerHTML = renderNodes(d);
         else if (d.state === "live" && d.id === "jenkins") el.innerHTML = renderJenkins(d);
         else if (d.state === "live" && d.id === "phexts") el.innerHTML = renderPhexts(d);
+        else if (d.state === "live" && d.id === "video") el.innerHTML = renderVideo(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })
