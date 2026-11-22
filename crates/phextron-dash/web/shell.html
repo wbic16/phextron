@@ -29,10 +29,19 @@
     --bad: #ef8a8a; --hold: #c39be8;
   }
   * { box-sizing: border-box; }
+  /* Emise v2 — Will's handwriting-derived typeface (Version 2.000),
+     served by the console itself at /fonts/Emise-v2.ttf. */
+  @font-face {
+    font-family: "Emise";
+    src: url("/fonts/Emise-v2.ttf") format("truetype");
+    font-display: swap;
+  }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
-    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font: 15px/1.5 "Emise", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+  button, input, select, textarea, code, pre, svg text { font-family: inherit; }
+  a { color: var(--accent); }
   header {
     display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
     padding: 16px 22px 10px; border-bottom: 1px solid var(--line);
@@ -486,11 +495,23 @@
            '<div class="coord">' + esc(b.caveat) + ':<br><code>' + esc(b.example) + '</code></div></div>';
     out += '<table><thead><tr><th>Node</th><th>Endpoint</th><th>Quant</th><th>Status</th><th>Progress / completion</th><th>Detail</th></tr></thead><tbody>';
     b.rows.forEach(function (r) {
-      var ep = r.endpoint
-        ? '<code>' + esc(r.endpoint) + '</code>' +
-          '<button type="button" class="copybtn" data-ep="' + esc(r.endpoint) +
-          '" onclick="copyEndpoint(this)">copy</button>'
-        : '<span class="sub-note">no tailnet address on record</span>';
+      var ep;
+      if (r.endpoint_host) {
+        // MagicDNS form: the link Will's own devices resolve, and
+        // what the copy button copies. The tailnet-IP URL stays
+        // visible beneath it as the secondary form.
+        ep = '<a href="' + esc(r.endpoint_host) + '"><code>' + esc(r.name) + ':' +
+             esc(b.port) + '</code></a>' +
+             '<button type="button" class="copybtn" data-ep="' + esc(r.endpoint_host) +
+             '" onclick="copyEndpoint(this)">copy</button>' +
+             (r.endpoint ? '<br><span class="sub-note">' + esc(r.endpoint) + '</span>' : '');
+      } else if (r.endpoint) {
+        ep = '<code>' + esc(r.endpoint) + '</code>' +
+             '<button type="button" class="copybtn" data-ep="' + esc(r.endpoint) +
+             '" onclick="copyEndpoint(this)">copy</button>';
+      } else {
+        ep = '<span class="sub-note">no tailnet address on record</span>';
+      }
       var prog;
       if (r.status === "serving") {
         prog = 'completed ' + esc(r.completed_local || "—") +

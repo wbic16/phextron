@@ -8,6 +8,14 @@
 //! deployment state, and — where it has finished installing — the
 //! Exocortical Epoch its completion landed in.
 //!
+//! Endpoints render as MagicDNS links (Will, 2026-11-22, EE 9): a
+//! node with a hostname on the roster also gets `endpoint_host` —
+//! `http://<hostname>.pizzly-halfmoon.ts.net:8090`, the form that
+//! resolves from Will's own devices — alongside the IP `endpoint`,
+//! which stays on the row as the secondary form. A node whose
+//! roster hostname is "unknown" (unlocated) gets no invented DNS
+//! name: `endpoint_host` is null and the IP form stands alone.
+//!
 //! Two sources, both read at request time, both named on the panel:
 //!
 //! - **The roster** — `wiring.phext`, the declaration of record for
@@ -374,6 +382,18 @@ fn build_rows(roster: &[RosterNode], reg: &Register) -> Vec<Value> {
         .iter()
         .map(|n| {
             let endpoint = n.ip.as_ref().map(|ip| format!("http://{}:{}", ip, PORT));
+            // The MagicDNS form of the same endpoint, from the
+            // roster hostname — presentation only; the register's
+            // IP records are untouched. "unknown" (unlocated)
+            // names no DNS entry, so no host form is derived.
+            let endpoint_host = if n.hostname != "unknown" {
+                Some(format!(
+                    "http://{}.pizzly-halfmoon.ts.net:{}",
+                    n.hostname, PORT
+                ))
+            } else {
+                None
+            };
             match reg.statuses.get(&n.initials) {
                 Some(st) => {
                     // The recorded EE wins; where a completion stamp
@@ -387,6 +407,7 @@ fn build_rows(roster: &[RosterNode], reg: &Register) -> Vec<Value> {
                         "wiring_state": n.wiring_state,
                         "ip": n.ip,
                         "endpoint": endpoint,
+                        "endpoint_host": endpoint_host,
                         "quant": st.quant,
                         "status": st.state,
                         "percent": st.percent,
@@ -405,6 +426,7 @@ fn build_rows(roster: &[RosterNode], reg: &Register) -> Vec<Value> {
                     "wiring_state": n.wiring_state,
                     "ip": n.ip,
                     "endpoint": endpoint,
+                    "endpoint_host": endpoint_host,
                     "quant": null,
                     "status": "unrecorded",
                     "percent": null,
@@ -722,6 +744,11 @@ mod tests {
         // Serving: endpoint formed from the roster IP, EE recorded.
         assert_eq!(rows[0]["status"], "serving");
         assert_eq!(rows[0]["endpoint"], "http://100.120.211.72:8090");
+        // The MagicDNS form rides alongside, from the roster hostname.
+        assert_eq!(
+            rows[0]["endpoint_host"],
+            "http://elven-path.pizzly-halfmoon.ts.net:8090"
+        );
         assert_eq!(rows[0]["ee"], 0);
         assert_eq!(rows[0]["completed_local"], "2026-11-21 22:07 CST");
         // Blocked + unlocated: the register's name stands in for the
@@ -729,10 +756,16 @@ mod tests {
         assert_eq!(rows[1]["status"], "blocked");
         assert_eq!(rows[1]["name"], "trust-fall");
         assert_eq!(rows[1]["endpoint"], Value::Null);
+        // Unlocated: no DNS name is invented for it either.
+        assert_eq!(rows[1]["endpoint_host"], Value::Null);
         // On the roster but absent from the register: unrecorded,
         // with its endpoint still shown — never a guessed state.
         assert_eq!(rows[2]["status"], "unrecorded");
         assert_eq!(rows[2]["endpoint"], "http://100.109.77.116:8090");
+        assert_eq!(
+            rows[2]["endpoint_host"],
+            "http://quacked-hill.pizzly-halfmoon.ts.net:8090"
+        );
     }
 
     #[test]

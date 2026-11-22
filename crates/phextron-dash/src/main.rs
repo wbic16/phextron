@@ -36,8 +36,17 @@ use std::net::TcpListener;
 
 const SHELL: &str = include_str!("../web/shell.html");
 
+/// The Emise v2 typeface — Will's handwriting-derived font, the
+/// kerning pass of 2026-11-21 ("Emise 2.000; wbic16", fontRevision
+/// 2.0; canonical asset: emise-font/out/Emise-v2.ttf, SHA-256
+/// 3d792cb2c400c0dc862f51edeb4939ecea70601bc31ab8fb57c329b01560f4c8,
+/// the legibility-corrected build). Embedded like the shell and
+/// served at /fonts/Emise-v2.ttf; the shell's @font-face names it
+/// as the console's primary UI font (Will, 2026-11-22, EE 9).
+const EMISE_V2_TTF: &[u8] = include_bytes!("../web/fonts/Emise-v2.ttf");
+
 fn security_headers() -> &'static str {
-    "X-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'\r\n"
+    "X-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'\r\n"
 }
 
 fn respond(stream: &mut std::net::TcpStream, status: &str, ctype: &str, body: &str) {
@@ -105,6 +114,13 @@ fn handle(mut stream: std::net::TcpStream) {
     let registry = panels::registry();
     match path.as_str() {
         "/" => respond(&mut stream, "200 OK", "text/html; charset=utf-8", SHELL),
+        "/fonts/Emise-v2.ttf" => respond_bytes(
+            &mut stream,
+            "200 OK",
+            "font/ttf",
+            EMISE_V2_TTF,
+            security_headers(),
+        ),
         "/web" | "/web/" => serve_web(&mut stream, "index.html", "text/html; charset=utf-8"),
         "/web/glue.js" => serve_web(&mut stream, "glue.js", "text/javascript; charset=utf-8"),
         "/web/phextron_web.wasm" => serve_web(&mut stream, "phextron_web.wasm", "application/wasm"),
