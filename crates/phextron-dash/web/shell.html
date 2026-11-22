@@ -666,6 +666,38 @@
     document.getElementById("sshCard").scrollIntoView({ block: "nearest" });
   }
 
+  function renderWau(d) {
+    var b = d.body, out = "";
+    out += '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
+           esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>';
+    out += '<div class="chips"><span class="chip">WAU today <b>' + esc(b.today.count) + '</b></span>' +
+           '<span class="chip">today <b>' + esc(b.today.date) + '</b></span>' +
+           '<span class="chip">total <b>' + esc(b.total) + '</b></span>' +
+           '<span class="chip">days tracked <b>' + esc(b.days.length) + '</b></span></div>';
+    out += '<div class="banner"><div><b>WAU</b> — "What Absurd Universe": Will\'s tag for a ' +
+           'resonance that lands, a coincidence beyond WTF with no information channel. ' +
+           'The name stays "likely it," provisional.</div></div>';
+    out += '<table><thead><tr><th>Day</th><th>WAU</th></tr></thead><tbody>';
+    b.days.forEach(function (day) {
+      out += '<tr><td><b>' + esc(day.date) + '</b></td><td>' + esc(day.count) + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    out += '<table style="margin-top:14px"><thead><tr><th>Moment</th><th>EE</th><th>Resonance</th></tr></thead><tbody>';
+    b.moments.forEach(function (m) {
+      var label = '<b>' + esc(m.tag || "WAU") + '</b> — ' + esc(m.date) +
+                  '<div class="sub-note">' + esc(m.where) + '</div>';
+      out += '<tr><td>' + label + '</td><td>' + esc(m.ee) + '</td>' +
+             '<td class="top">' + esc(m.resonance) + '</td></tr>';
+    });
+    out += '</tbody></table>';
+    out += '<p class="src" style="margin-top:10px">Counts are by tag date — the day a moment ' +
+           'was marked; an earlier event date lives inside its entry (WAU-1\'s event is ' +
+           '2022-11-29, tagged at the coinage on 2026-11-18). Only WAU-1, WAU-2, and WAU-3 ' +
+           'carry numbers — Will\'s own tags; later moments are unnumbered. The register is ' +
+           'rebuilt from its atom log with <b>build_wau_phext.py</b> in ~/workspace/phext.</p>';
+    return out;
+  }
+
   function renderRecon(d) {
     return '<p class="src">Source: <b>' + esc(d.source.name) + '</b> · ' +
       esc(d.source.location) + '<br>Freshness: ' + esc(d.source.freshness) + '</p>' +
@@ -701,6 +733,7 @@
             g.addEventListener("dblclick", function () { showSsh(g.dataset.initials); });
           });
         }
+        else if (d.state === "live" && d.id === "wau") el.innerHTML = renderWau(d);
         else if (d.state === "degraded") el.innerHTML = renderDegraded(d);
         else el.innerHTML = renderRecon(d);
       })

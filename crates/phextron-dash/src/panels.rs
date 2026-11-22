@@ -78,6 +78,9 @@ pub trait Panel: Send + Sync {
 /// — and the Wiring panel (W4 plan §1.11, task 24.5.6/6.5.9/5.5.12):
 /// the fleet topology drawn from wiring.phext, double-click a node
 /// for its SSH command.
+/// — and the WAU panel (task 27.6.8/7.5.11/6.5.8): the WAU/Day
+/// tracker, Will's tagged "What Absurd Universe" moments counted
+/// per day from the wau.phext register's atoms.
 pub fn registry() -> Vec<Box<dyn Panel>> {
     vec![
         Box::new(crate::nodes::NodesPanel),
@@ -89,5 +92,6 @@ pub fn registry() -> Vec<Box<dyn Panel>> {
         Box::new(crate::substrates::SubstratesPanel),
         Box::new(crate::inkling::InklingPanel),
         Box::new(crate::wiring::WiringPanel),
+        Box::new(crate::wau::WauPanel),
     ]
 }
